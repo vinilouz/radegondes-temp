@@ -1,0 +1,61 @@
+# Node.js / Geral
+node_modules/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Editor and OS Specific
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.bak
+*.orig
+.DS_Store
+Thumbs.db
+ehthumbs.db
+.cache/
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
+.history/
+
+# Build artifacts and Temporary files
+build/
+dist/
+out/
+tmp/
+temp/
+coverage/
+
+# Frontend (React com Vite)
+frontend/dist/           # Saída de build do Vite para o frontend
+frontend/node_modules/   # Dependências do frontend
+frontend/coverage/       # Relatórios de cobertura de testes do frontend
+.vite/                   # Pasta de cache/temporária do Vite
+
+# Backend (Express.js)
+backend/node_modules/    # Dependências do backend
+backend/build/           # Possíveis saídas de build do backend (se usar TypeScript, por exemplo)
+backend/dist/            # Possíveis saídas de build do backend
+backend/logs/            # Logs específicos do backend
+
+# IDE / User files
+.bmad-core
+.claude
+.roomodes
