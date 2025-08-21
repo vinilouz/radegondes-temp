@@ -33,6 +33,7 @@ function PlanoDetalhes() {
     questoesTotal: 0,
     disciplinasDetalhadas: []
   });
+  const [tempoDeEstudos, setTempoDeEstudos] = useState(0);
   const [loading, setLoading] = useState(true);
   const [menuAberto, setMenuAberto] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -153,8 +154,14 @@ function PlanoDetalhes() {
             statusMap[registro.disciplinaId] = true;
           }
         });
-        
-        setStatusDisciplinas(statusMap);
+        if (data && Array.isArray(data.registros)) {
+          const totalTempoEstudo = data.registros
+            .filter(registro => registro.tempoEstudo != null)
+            .reduce((acc, registro) => acc + registro.tempoEstudo, 0);
+          
+          setTempoDeEstudos(formatarTempo(totalTempoEstudo));
+        }
+        setStatusDisciplinas(statusMap));
       }
     } catch (error) {
       console.error('Erro ao buscar status das disciplinas:', error);
@@ -560,10 +567,19 @@ function PlanoDetalhes() {
     }
   };
 
-  const formatarTempo = (minutos) => {
-    const horas = Math.floor(minutos / 60);
-    const mins = minutos % 60;
-    return `${horas}h${mins.toString().padStart(2, '0')}min`;
+  const formatarTempo = (segundos) => {
+    console.log(segundos, 'asdfjkl;asdfjklasdfjkl;jkl;asdfjkl;asdfjkl;fsdjkl;sdfjkl;')
+    const horas = Math.floor(segundos / 3600);
+    const minutos = Math.floor((segundos % 3600) / 60);
+    const segundosRestantes = segundos % 60;
+    
+    if (horas > 0) {
+      return `${horas}h ${minutos.toString().padStart(2, '0')}m ${segundosRestantes.toString().padStart(2, '0')}s`;
+    } else if (minutos > 0) {
+      return `${minutos}m ${segundosRestantes.toString().padStart(2, '0')}s`;
+    } else {
+      return `${segundosRestantes}s`;
+    }
   };
 
   if (loading) {
@@ -892,7 +908,7 @@ function PlanoDetalhes() {
               </svg>
             </div>
             <div className="stat-content">
-              <div className="stat-number">{formatarTempo(plano.horasEstudo || 0)}</div>
+              <div className="stat-number">{tempoDeEstudos}</div>
               <div className="stat-label">Horas de Estudo</div>
             </div>
           </div>
