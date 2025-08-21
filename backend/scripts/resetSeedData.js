@@ -6,7 +6,7 @@ const seedDatabase = require('../config/seedDatabase');
 
 async function resetAndSeed() {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(process.env.MONGO_URI);
     console.log('Conectado ao MongoDB');
     
     // Limpar dados existentes

@@ -14,7 +14,7 @@ describe('Disciplinas Routes', () => {
   let editalPersonalizadoId;
 
   beforeAll(async () => {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/radegondes_test');
+    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/radegondes_test');
     
     const user = await User.create({
       nome: 'Test',
