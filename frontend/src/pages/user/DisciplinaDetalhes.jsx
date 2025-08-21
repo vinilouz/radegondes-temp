@@ -116,7 +116,7 @@ function DisciplinaDetalhes() {
   
   // Estado para timers individuais de cada tópico
   const [timersTopicos, setTimersTopicos] = useState({});
-  const topicosUnicos = useMemo(() => Array.from(new Set(disciplina?.topicos || [])), [disciplina?.topicos]);
+  const topicosUnicos = useMemo(() => disciplina?.topicos || [], [disciplina?.topicos]);
   
   // Salvar timers no localStorage sempre que mudarem
   useEffect(() => {
@@ -642,7 +642,34 @@ function DisciplinaDetalhes() {
     }
   };
 
-  const abrirModalEstudo = (topico, abaInicial = 'informacoes') => {
+  // Função auxiliar para encontrar timer de um tópico (busca por nome exato ou chave única)
+  const encontrarTimerTopico = (topico) => {
+    // Primeiro, tentar a chave direta
+    if (timersTopicos[topico]) {
+      return timersTopicos[topico];
+    }
+    
+    // Buscar por chaves únicas que contenham o tópico
+    const chavesRelacionadas = Object.keys(timersTopicos).filter(chave => 
+      chave.startsWith(`${topico}-`) && chave.match(new RegExp(`^${topico.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-\\d+$`))
+    );
+    
+    if (chavesRelacionadas.length > 0) {
+      // Se houver múltiplas chaves, retornar a que está ativa ou a primeira
+      const chaveAtiva = chavesRelacionadas.find(chave => timersTopicos[chave]?.ativo);
+      if (chaveAtiva) {
+        return timersTopicos[chaveAtiva];
+      }
+      
+      // Senão, retornar a primeira encontrada
+      return timersTopicos[chavesRelacionadas[0]];
+    }
+    
+    // Fallback: timer vazio
+    return { tempo: 0, ativo: false, finalizado: false };
+  };
+
+  const abrirModalEstudo = (topico, abaInicial = 'informacoes', indice = null) => {
     console.log(`=== ABRINDO MODAL - ${topico} ===`);
     
     // Definir estados básicos
@@ -654,9 +681,9 @@ function DisciplinaDetalhes() {
     const jaFoiEstudado = statusTopicos[topico]?.jaEstudado || false;
     setMarcarComoEstudado(jaFoiEstudado);
     
-    // Sincronizar timer
-    const timerAtual = timersTopicos[topico];
-    if (timerAtual) {
+    // Sincronizar timer - usar função auxiliar para encontrar timer correto
+    const timerAtual = encontrarTimerTopico(topico);
+    if (timerAtual && timerAtual.tempo > 0) {
       setTempoEstudoTimer(timerAtual.tempo);
     }
     
@@ -919,14 +946,17 @@ function DisciplinaDetalhes() {
   };
 
   // Função para salvamento automático quando pausar timer
-  const salvarAutomatico = async (topico) => {
+  const salvarAutomatico = async (topico, chaveUnica = null) => {
     try {
       if (!disciplina || !disciplina._id || !token) {
         return;
       }
 
+      // Usar chaveUnica se fornecida, senão usar topico como fallback para compatibilidade
+      const chaveTimer = chaveUnica || topico;
+      
       // Obter dados atuais do timer
-      const timerAtual = timersTopicos[topico];
+      const timerAtual = timersTopicos[chaveTimer];
       if (!timerAtual || timerAtual.tempo === 0) {
         return; // Não salvar se não há tempo registrado
       }
@@ -1272,9 +1302,9 @@ function DisciplinaDetalhes() {
               </div>
               
               {/* Lista de tópicos */}
-              {topicosUnicos.map((topico) => (
+              {topicosUnicos.map((topico, key) => (
                 <div
-                  key={topico}
+                  key={key}
                   style={{
                     display: 'grid',
                     gridTemplateColumns: '1fr 120px 180px 150px',
@@ -1300,7 +1330,7 @@ function DisciplinaDetalhes() {
                   <div 
                     onClick={(e) => {
                       e.stopPropagation();
-                      abrirModalEstudo(topico);
+                      abrirModalEstudo(topico, 'informacoes', key);
                     }}
                     style={{
                     fontSize: '16px',
@@ -1377,6 +1407,8 @@ function DisciplinaDetalhes() {
                     alignItems: 'center'
                   }}>
                     <TimerTopico 
+                      key={key}
+                      indice={key}
                       topico={topico}
                       timersTopicos={timersTopicos}
                       setTimersTopicos={setTimersTopicos}
@@ -1407,7 +1439,7 @@ function DisciplinaDetalhes() {
                         <div 
                           onClick={(e) => {
                             e.stopPropagation();
-                            abrirModalEstudo(topico, 'detalhes');
+                            abrirModalEstudo(topico, 'detalhes', key);
                           }}
                           style={{
                           display: 'flex',
@@ -1441,7 +1473,7 @@ function DisciplinaDetalhes() {
                         <div 
                           onClick={(e) => {
                             e.stopPropagation();
-                            abrirModalEstudo(topico, 'detalhes');
+                            abrirModalEstudo(topico, 'detalhes', key);
                           }}
                           style={{
                           display: 'flex',
@@ -1484,7 +1516,7 @@ function DisciplinaDetalhes() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        abrirModalEstudo(topico);
+                        abrirModalEstudo(topico, 'informacoes', key);
                       }}
                       className="topic-action-button success"
                     >
@@ -2312,8 +2344,35 @@ function AbaTimers({ topico, timersTopicos, setTimersTopicos, setTempoEstudoTime
   // Armazenar o intervalId fora do estado para evitar conflitos
   const intervalRef = useRef(null);
 
+  // Função auxiliar para encontrar timer do tópico (mesma lógica do componente principal)
+  const encontrarTimerTopico = (topico) => {
+    // Primeiro, tentar a chave direta
+    if (timersTopicos[topico]) {
+      return { timer: timersTopicos[topico], chave: topico };
+    }
+    
+    // Buscar por chaves únicas que contenham o tópico
+    const chavesRelacionadas = Object.keys(timersTopicos).filter(chave => 
+      chave.startsWith(`${topico}-`) && chave.match(new RegExp(`^${topico.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-\\d+$`))
+    );
+    
+    if (chavesRelacionadas.length > 0) {
+      // Se houver múltiplas chaves, retornar a que está ativa ou a primeira
+      const chaveAtiva = chavesRelacionadas.find(chave => timersTopicos[chave]?.ativo);
+      if (chaveAtiva) {
+        return { timer: timersTopicos[chaveAtiva], chave: chaveAtiva };
+      }
+      
+      // Senão, retornar a primeira encontrada
+      return { timer: timersTopicos[chavesRelacionadas[0]], chave: chavesRelacionadas[0] };
+    }
+    
+    // Fallback: timer vazio
+    return { timer: { tempo: 0, ativo: false, finalizado: false }, chave: topico };
+  };
+
   // Obter estado do timer para este tópico específico
-  const timerTopico = timersTopicos[topico] || { tempo: 0, ativo: false, finalizado: false };
+  const { timer: timerTopico, chave: chaveTimer } = encontrarTimerTopico(topico);
 
   // Atualizar tempoEstudoTimer sempre que o timer do tópico mudar
   useEffect(() => {
@@ -2352,8 +2411,8 @@ function AbaTimers({ topico, timersTopicos, setTimersTopicos, setTempoEstudoTime
       Object.keys(prev).forEach(key => {
         novosTimers[key] = { ...prev[key], ativo: false };
       });
-      // Ativar apenas o timer atual
-      novosTimers[topico] = { ...timerTopico, tempo: tempoInicial, ativo: true };
+      // Ativar apenas o timer atual usando a chave correta
+      novosTimers[chaveTimer] = { ...timerTopico, tempo: tempoInicial, ativo: true };
       return novosTimers;
     });
 
@@ -2361,9 +2420,9 @@ function AbaTimers({ topico, timersTopicos, setTimersTopicos, setTempoEstudoTime
     intervalRef.current = setInterval(() => {
       setTimersTopicos(prev => ({
         ...prev,
-        [topico]: {
-          ...prev[topico],
-          tempo: (prev[topico]?.tempo || 0) + 1
+        [chaveTimer]: {
+          ...prev[chaveTimer],
+          tempo: (prev[chaveTimer]?.tempo || 0) + 1
         }
       }));
     }, 1000);
@@ -2373,15 +2432,15 @@ function AbaTimers({ topico, timersTopicos, setTimersTopicos, setTempoEstudoTime
     // Limpar interval
     limparInterval();
 
-    // Pausar timer para este tópico
+    // Pausar timer para este tópico usando a chave correta
     setTimersTopicos(prev => ({
       ...prev,
-      [topico]: { ...timerTopico, ativo: false }
+      [chaveTimer]: { ...timerTopico, ativo: false }
     }));
 
     // Chamar função de salvamento automático se fornecida
     if (onPause && typeof onPause === 'function') {
-      await onPause(topico);
+      await onPause(topico, chaveTimer);
     }
   };
 
@@ -2389,10 +2448,10 @@ function AbaTimers({ topico, timersTopicos, setTimersTopicos, setTempoEstudoTime
     // Limpar interval
     limparInterval();
     
-    // Resetar timer para este tópico
+    // Resetar timer para este tópico usando a chave correta
     setTimersTopicos(prev => ({
       ...prev,
-      [topico]: { tempo: 0, ativo: false, finalizado: false }
+      [chaveTimer]: { tempo: 0, ativo: false, finalizado: false }
     }));
   };
 
@@ -2409,14 +2468,14 @@ function AbaTimers({ topico, timersTopicos, setTimersTopicos, setTempoEstudoTime
       intervalRef.current = setInterval(() => {
         setTimersTopicos(prev => ({
           ...prev,
-          [topico]: {
-            ...prev[topico],
-            tempo: (prev[topico]?.tempo || 0) + 1
+          [chaveTimer]: {
+            ...prev[chaveTimer],
+            tempo: (prev[chaveTimer]?.tempo || 0) + 1
           }
         }));
       }, 1000);
     }
-  }, [timerTopico.ativo]);
+  }, [timerTopico.ativo, chaveTimer]);
 
   // Parar timer se não está mais ativo
   useEffect(() => {
@@ -3025,11 +3084,14 @@ function AbaHistorico({ registrosEstudo, carregandoRegistros, disciplina }) {
 }
 
 // Componente Timer para cada Tópico
-function TimerTopico({ topico, timersTopicos, setTimersTopicos, onPause, obterUltimoTempoTopico, token, disciplina, planoId }) {
+function TimerTopico({indice, topico, timersTopicos, setTimersTopicos, onPause, obterUltimoTempoTopico, token, disciplina, planoId }) {
   const intervalRef = useRef(null);
 
-  // Obter estado do timer para este tópico específico
-  const timerTopico = timersTopicos[topico] || { tempo: 0, ativo: false, finalizado: false };
+  // Criar chave única combinando topico e indice para evitar conflitos com tópicos duplicados
+  const chaveUnica = `${topico}-${indice}`;
+
+  // Obter estado do timer para este tópico específico usando a chave única
+  const timerTopico = timersTopicos[chaveUnica] || { tempo: 0, ativo: false, finalizado: false };
 
   const formatarTempo = (segundos) => {
     const horas = Math.floor(segundos / 3600);
@@ -3061,7 +3123,6 @@ function TimerTopico({ topico, timersTopicos, setTimersTopicos, onPause, obterUl
     if (tempoInicial === 0 && obterUltimoTempoTopico) {
       tempoInicial = obterUltimoTempoTopico(topico);
     }
-
     // Pausar todos os outros timers antes de iniciar este
     setTimersTopicos(prev => {
       const novosTimers = {};
@@ -3069,8 +3130,9 @@ function TimerTopico({ topico, timersTopicos, setTimersTopicos, onPause, obterUl
       Object.keys(prev).forEach(key => {
         novosTimers[key] = { ...prev[key], ativo: false };
       });
-      // Ativar apenas o timer atual
-      novosTimers[topico] = { ...timerTopico, tempo: tempoInicial, ativo: true };
+      // Ativar apenas o timer atual usando a chave única
+      novosTimers[chaveUnica] = { ...timerTopico, tempo: tempoInicial, ativo: true };
+      console.log(novosTimers);
       return novosTimers;
     });
 
@@ -3101,13 +3163,13 @@ function TimerTopico({ topico, timersTopicos, setTimersTopicos, onPause, obterUl
       console.error('Erro ao adicionar tópico às revisões:', error);
     }
 
-    // Criar novo interval
+    // Criar novo interval apenas para este timer
     intervalRef.current = setInterval(() => {
       setTimersTopicos(prev => ({
         ...prev,
-        [topico]: {
-          ...prev[topico],
-          tempo: (prev[topico]?.tempo || 0) + 1
+        [chaveUnica]: {
+          ...prev[chaveUnica],
+          tempo: (prev[chaveUnica]?.tempo || 0) + 1
         }
       }));
     }, 1000);
@@ -3119,15 +3181,15 @@ function TimerTopico({ topico, timersTopicos, setTimersTopicos, onPause, obterUl
     // Limpar interval
     limparInterval();
 
-    // Pausar timer para este tópico
+    // Pausar timer para este tópico usando a chave única
     setTimersTopicos(prev => ({
       ...prev,
-      [topico]: { ...timerTopico, ativo: false }
+      [chaveUnica]: { ...timerTopico, ativo: false }
     }));
 
     // Chamar função de salvamento automático se fornecida
     if (onPause && typeof onPause === 'function') {
-      await onPause(topico);
+      await onPause(topico, chaveUnica);
     }
   };
 
@@ -3137,10 +3199,10 @@ function TimerTopico({ topico, timersTopicos, setTimersTopicos, onPause, obterUl
     // Limpar interval
     limparInterval();
     
-    // Resetar timer para este tópico
+    // Resetar timer para este tópico usando a chave única
     setTimersTopicos(prev => ({
       ...prev,
-      [topico]: { tempo: 0, ativo: false, finalizado: false }
+      [chaveUnica]: { tempo: 0, ativo: false, finalizado: false }
     }));
   };
 
@@ -3157,14 +3219,14 @@ function TimerTopico({ topico, timersTopicos, setTimersTopicos, onPause, obterUl
       intervalRef.current = setInterval(() => {
         setTimersTopicos(prev => ({
           ...prev,
-          [topico]: {
-            ...prev[topico],
-            tempo: (prev[topico]?.tempo || 0) + 1
+          [chaveUnica]: {
+            ...prev[chaveUnica],
+            tempo: (prev[chaveUnica]?.tempo || 0) + 1
           }
         }));
       }, 1000);
     }
-  }, [timerTopico.ativo]);
+  }, [timerTopico.ativo, chaveUnica]);
 
   // Parar timer se não está mais ativo
   useEffect(() => {
