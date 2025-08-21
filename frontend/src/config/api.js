@@ -4,8 +4,8 @@ export const API_CONFIG = {
   BASE_URL: import.meta.env?.VITE_API_BASE_URL || 'http://localhost:5000',
   ENDPOINTS: {
     AUTH: {
-      LOGIN: '/api/auth/login',
-      REGISTER: '/api/auth/register'
+      LOGIN: '/api/login',
+      REGISTER: '/api/register'
     },
     ADMIN: {
       USERS: '/api/admin/users',

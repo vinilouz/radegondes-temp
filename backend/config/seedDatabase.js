@@ -24,13 +24,11 @@ const seedAdminUser = async () => {
     const adminExists = await User.findOne({ role: 'admin' });
     
     if (!adminExists) {
-      const hashedPassword = await bcrypt.hash('admin123', 10);
-      
       const adminUser = new User({
         nome: 'Administrador',
         sobrenome: 'Sistema',
         email: 'admin@radegondes.com',
-        password: hashedPassword,
+        password: 'admin123',
         role: 'admin'
       });
       

@@ -4,7 +4,7 @@ const User = require('./models/User');
 
 const createTestUser = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(process.env.MONGO_URI);
     console.log('Conectado ao MongoDB');
 
     // Verificar se já existe um usuário teste
