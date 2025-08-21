@@ -71,7 +71,12 @@ mongoose.connect(process.env.MONGO_URI)
   .catch(err => console.error('Erro ao conectar ao MongoDB Atlas:', err));
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? [process.env.FRONTEND_URL, process.env.BACKEND_URL].filter(Boolean) 
+    : true,
+  credentials: true
+}));
 app.use('/uploads', express.static('uploads'));
 
 

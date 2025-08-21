@@ -8,8 +8,6 @@ services:
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
     volumes:
       - mongodb_data:/data/db
-    ports:
-      - "${MONGODB_PORT:-27017}:27017"
     networks:
       - radegondes
     healthcheck:
@@ -17,8 +15,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    labels:
-      - coolify.managed=true
 
   backend:
     build:
@@ -26,30 +22,26 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      SERVICE_FQDN_BACKEND_5000:
-      MONGO_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_INITDB_DATABASE}?authSource=admin
-      JWT_SECRET: ${JWT_SECRET}
-      NODE_ENV: ${NODE_ENV:-production}
-      PORT: 5000
-    ports:
-      - "${BACKEND_PORT:-5000}:5000"
+      - MONGO_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_INITDB_DATABASE}?authSource=admin
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=5000
     networks:
       - radegondes
     depends_on:
       mongodb:
         condition: service_healthy
-    labels:
-      - coolify.managed=true
 
-  mongo-express:
+  db-admin:
     image: mongo-express
+    restart: unless-stopped
     ports:
       - "8081:8081"
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
-      ME_CONFIG_MONGODB_SERVER: mongodb
-      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_INITDB_DATABASE}?authSource=admin
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_URL=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_INITDB_DATABASE}?authSource=admin
     networks:
       - radegondes
     depends_on:
@@ -60,18 +52,13 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${SERVICE_FQDN_BACKEND_5000}
     restart: unless-stopped
-    environment:
-      SERVICE_FQDN_FRONTEND_3000:
-      VITE_API_BASE_URL: ${SERVICE_FQDN_BACKEND_5000}
-    ports:
-      - "${FRONTEND_PORT:-3000}:3000"
     networks:
       - radegondes
     depends_on:
       - backend
-    labels:
-      - coolify.managed=true
 
 volumes:
   mongodb_data:

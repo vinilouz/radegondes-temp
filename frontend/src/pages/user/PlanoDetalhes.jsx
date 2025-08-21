@@ -161,7 +161,7 @@ function PlanoDetalhes() {
           
           setTempoDeEstudos(formatarTempo(totalTempoEstudo));
         }
-        setStatusDisciplinas(statusMap));
+        setStatusDisciplinas(statusMap);
       }
     } catch (error) {
       console.error('Erro ao buscar status das disciplinas:', error);
