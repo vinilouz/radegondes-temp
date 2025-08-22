@@ -37,6 +37,8 @@ function DisciplinaDetalhes() {
   // Estado para checkbox "Marcar como estudado"
   const [marcarComoEstudado, setMarcarComoEstudado] = useState(false);
 
+  // Estado para sincronizar dataOpcao entre componentes
+  const [dataOpcaoAtual, setDataOpcaoAtual] = useState('estudando');
   // Carregar sessões do localStorage na inicialização
   useEffect(() => {
     if (disciplina?._id) {
@@ -135,19 +137,19 @@ function DisciplinaDetalhes() {
     if (disciplina?._id && planoId) {
       const chaveTimersStorage = `timers_${planoId}_${disciplina._id}`;
       const timersStorage = localStorage.getItem(chaveTimersStorage);
-      
+
       if (timersStorage) {
         try {
           const timersCarregados = JSON.parse(timersStorage);
-          
+
           // Inicializar timers para todos os tópicos com estrutura correta
           const timersInicializados = {};
-          
+
           // Percorrer os tópicos e inicializar com dados do localStorage ou valores padrão
           if (disciplina?.topicos) {
             disciplina.topicos.forEach((topico, indice) => {
               const chaveUnica = `${topico}-${indice}`;
-              
+
               // Buscar timer salvo no localStorage
               if (timersCarregados[chaveUnica]) {
                 // Se encontrou a chave exata, usar os dados salvos
@@ -166,7 +168,7 @@ function DisciplinaDetalhes() {
               }
             });
           }
-          
+
           setTimersTopicos(timersInicializados);
           console.log('✅ Timers carregados com sucesso do localStorage');
         } catch (e) {
@@ -327,10 +329,10 @@ function DisciplinaDetalhes() {
     try {
       // Buscar dados do plano para encontrar a disciplina específica
       const response = await authenticatedFetch(`${API_BASE_URL}/api/planos/${planoId}`);
-
       if (response && response.ok) {
         const planoData = await response.json();
         setPlano(planoData);
+        console.log(planoData, '-00-0-0-0-0-0-0-0-0-0-0-0-0-')
 
         // Encontrar a disciplina específica
         const disciplinaEncontrada = planoData.disciplinasDetalhadas?.find(
@@ -364,7 +366,6 @@ function DisciplinaDetalhes() {
     try {
       const timestamp = Date.now();
       const response = await authenticatedFetch(`${API_BASE_URL}/api/registros-estudo?planoId=${plano._id}&limit=5000&_t=${timestamp}`);
-
       if (response && response.ok) {
         const data = await response.json();
         setRegistrosPlano(data.registros || []);
@@ -411,7 +412,6 @@ function DisciplinaDetalhes() {
       if (response && response.ok) {
         const data = await response.json();
         const registros = data.registros || [];
-
         setRegistrosEstudo(registros);
 
         // Processar últimos registros por tópico - SIMPLIFICADO
@@ -624,6 +624,14 @@ function DisciplinaDetalhes() {
     setTopicoEditado(topico);
     setAbaAtiva(abaInicial);
 
+    // Inicializar dataOpcao baseado no status do tópico
+    const statusDoTopico = statusTopicos[topico];
+    if (statusDoTopico) {
+      setDataOpcaoAtual(statusDoTopico.tipo || 'estudando');
+    } else {
+      setDataOpcaoAtual('estudando');
+    }
+
     // Verificar se o tópico já foi estudado e marcar o checkbox
     const jaFoiEstudado = statusTopicos[topico]?.jaEstudado || false;
     setMarcarComoEstudado(jaFoiEstudado);
@@ -677,7 +685,7 @@ function DisciplinaDetalhes() {
       alert('Dados incompletos para salvamento!');
       return;
     }
-
+    console.log(statusTopicos[topicoSelecionado]?.tipo, 'asdkl;fja;lkdfjal;kjsdfl;akdjfl;aksjfd');
     try {
       // Dados diretos dos estados atuais
       const dadosParaSalvar = {
@@ -694,7 +702,7 @@ function DisciplinaDetalhes() {
         questoesRealizadas: parseInt(questoesRealizadas) || 0,
         estudoFinalizado: Boolean(estudoFinalizado),
         marcarComoEstudado: Boolean(marcarComoEstudado),
-        dataOpcao: statusTopicos[topicoSelecionado]?.tipo || 'estudando',
+        dataOpcao: dataOpcaoAtual,
         dataAgendada: statusTopicos[topicoSelecionado]?.dataAgendada || '',
         tipoAtividade: 'estudo',
         iniciadaEm: new Date(),
@@ -861,7 +869,7 @@ function DisciplinaDetalhes() {
   if (loading) {
     return <SkeletonDisciplina />;
   }
-
+  console.log(statusTopicos, '[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[')
   if (!disciplina) {
     return (
       <div className="error-container">
@@ -1103,7 +1111,8 @@ function DisciplinaDetalhes() {
 
               {/* Lista de tópicos */}
               {topicosUnicos.map((topico, key) => {
-                  return (
+                console.log(statusTopicos[topico], 'kkkkkkkkkkkk')
+                return (
                   <div
                     key={key}
                     style={{
@@ -1158,7 +1167,7 @@ function DisciplinaDetalhes() {
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
                         <span>{topico}</span>
-                        {statusTopicos[topico]?.jaEstudado && (
+                        {statusTopicos[topico]?.tipo | statusTopicos[topico]?.jaEstudado && (
                           <span style={{
                             padding: '2px 6px',
                             backgroundColor: 'rgba(34, 197, 94, 0.1)',
@@ -1168,9 +1177,10 @@ function DisciplinaDetalhes() {
                             fontWeight: '500',
                             fontSize: '12px'
                           }}>
-                            Estudando
+                            {statusTopicos[topico]?.tipo === 'estudando' ? 'Estudando': 'Já estudei' }
                           </span>
                         )}
+                       
                         {verificarTopicoAgendado(topico) && (
                           <>
                             <span style={{
@@ -1484,6 +1494,10 @@ function DisciplinaDetalhes() {
                 setEstudoFinalizado={setEstudoFinalizado}
                 topicoEditado={topicoEditado}
                 setTopicoEditado={setTopicoEditado}
+                statusTopicoSincronizacao={{
+                  dataOpcao: dataOpcaoAtual,
+                  setDataOpcao: setDataOpcaoAtual
+                }}
               />}
               {abaAtiva === 'timers' && <AbaTimers
                 topico={topicoSelecionado}
@@ -1537,10 +1551,15 @@ function DisciplinaDetalhes() {
                   }}>
                     <input
                       type="checkbox"
-                      checked={marcarComoEstudado}
+                      checked={dataOpcaoAtual === 'ja-estudei' ? true : false}
                       onChange={(e) => {
-                        setMarcarComoEstudado(e.target.checked);
-
+                        // setMarcarComoEstudado(e.target.checked);
+                        // Sincronizar dataOpcaoAtual com o estado do checkbox
+                        if (e.target.checked) {
+                          setDataOpcaoAtual('ja-estudei'); // ou outro valor apropriado quando marcado
+                        } else {
+                          setDataOpcaoAtual('estudando'); // valor que faz o checkbox ficar desmarcado
+                        }
                         // Efeito de ripple
                         if (e.target.checked) {
                           const ripple = document.createElement('div');
@@ -1574,15 +1593,15 @@ function DisciplinaDetalhes() {
                       height: '18px',
                       border: '2px solid var(--orange)',
                       borderRadius: '4px',
-                      backgroundColor: marcarComoEstudado ? 'var(--orange)' : 'transparent',
+                      backgroundColor: (dataOpcaoAtual === 'ja-estudei') ? 'var(--orange)' : 'transparent',
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      transform: marcarComoEstudado ? 'scale(1.05)' : 'scale(1)',
-                      boxShadow: marcarComoEstudado ? '0 0 0 2px rgba(245, 158, 11, 0.2)' : 'none'
+                      transform: (dataOpcaoAtual === 'ja-estudei') ? 'scale(1.05)' : 'scale(1)',
+                      boxShadow: (dataOpcaoAtual === 'ja-estudei') ? '0 0 0 2px rgba(245, 158, 11, 0.2)' : 'none'
                     }}>
-                      {marcarComoEstudado && (
+                      {(dataOpcaoAtual === 'ja-estudei') && (
                         <svg
                           width="12"
                           height="12"
@@ -1732,10 +1751,13 @@ function DisciplinaDetalhes() {
 }
 
 // Componente da Aba Informações
-function AbaInformacoes({ topico, statusTopicos, setStatusTopicos, material, setMaterial, comentarios, setComentarios, topicoEditado, setTopicoEditado }) {
-  const [dataOpcao, setDataOpcao] = useState('estudando');
+function AbaInformacoes({ topico, statusTopicos, setStatusTopicos, material, setMaterial, comentarios, setComentarios, topicoEditado, setTopicoEditado, statusTopicoSincronizacao }) {
   const dateInputRef = useRef(null);
   const timeInputRef = useRef(null);
+
+  // Usar dataOpcao do statusTopicoSincronizacao
+  const dataOpcao = statusTopicoSincronizacao?.dataOpcao || 'estudando';
+  const setDataOpcao = statusTopicoSincronizacao?.setDataOpcao || (() => { });
 
   // Sincronizar com o status salvo do tópico quando o componente for montado ou tópico mudar
   useEffect(() => {
