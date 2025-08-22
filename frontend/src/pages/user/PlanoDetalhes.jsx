@@ -162,6 +162,7 @@ function PlanoDetalhes() {
           setTempoDeEstudos(formatarTempo(totalTempoEstudo));
         }
         setStatusDisciplinas(statusMap);
+
       }
     } catch (error) {
       console.error('Erro ao buscar status das disciplinas:', error);
@@ -568,7 +569,6 @@ function PlanoDetalhes() {
   };
 
   const formatarTempo = (segundos) => {
-    console.log(segundos, 'asdfjkl;asdfjklasdfjkl;jkl;asdfjkl;asdfjkl;fsdjkl;sdfjkl;')
     const horas = Math.floor(segundos / 3600);
     const minutos = Math.floor((segundos % 3600) / 60);
     const segundosRestantes = segundos % 60;
