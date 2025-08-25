@@ -124,6 +124,7 @@ function DisciplinaDetalhes() {
   // Estado para timers individuais de cada tópico
   const [timersTopicos, setTimersTopicos] = useState({});
   const topicosUnicos = useMemo(() => disciplina?.topicos || [], [disciplina?.topicos]);
+
   // Salvar timers no localStorage sempre que mudarem
   useEffect(() => {
     if (disciplina?._id && planoId && Object.keys(timersTopicos).length > 0) {
@@ -745,7 +746,6 @@ function DisciplinaDetalhes() {
       alert(`Erro: ${error.message}`);
     }
   };
-
   // Função para gerar ID único de sessão
   const gerarSessaoIdUnica = (tipo, topico) => {
     const timestamp = Date.now();
@@ -869,7 +869,6 @@ function DisciplinaDetalhes() {
   if (loading) {
     return <SkeletonDisciplina />;
   }
-  console.log(statusTopicos, '[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[')
   if (!disciplina) {
     return (
       <div className="error-container">
@@ -1111,7 +1110,6 @@ function DisciplinaDetalhes() {
 
               {/* Lista de tópicos */}
               {topicosUnicos.map((topico, key) => {
-                console.log(statusTopicos[topico], 'kkkkkkkkkkkk')
                 return (
                   <div
                     key={key}
@@ -1167,7 +1165,7 @@ function DisciplinaDetalhes() {
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
                         <span>{topico}</span>
-                        {statusTopicos[topico]?.tipo | statusTopicos[topico]?.jaEstudado && (
+                        {(statusTopicos[topico]?.tipo || statusTopicos[topico]?.jaEstudado) && (
                           <span style={{
                             padding: '2px 6px',
                             backgroundColor: 'rgba(34, 197, 94, 0.1)',

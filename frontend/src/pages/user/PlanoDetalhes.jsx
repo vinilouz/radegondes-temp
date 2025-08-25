@@ -155,10 +155,10 @@ function PlanoDetalhes() {
           }
         });
         if (data && Array.isArray(data.registros)) {
-          const totalTempoEstudo = data.registros
+          const registrosDoPlano = data.registros.filter(registro => registro.plano === id);
+          const totalTempoEstudo = registrosDoPlano
             .filter(registro => registro.tempoEstudo != null)
             .reduce((acc, registro) => acc + registro.tempoEstudo, 0);
-          
           setTempoDeEstudos(formatarTempo(totalTempoEstudo));
         }
         setStatusDisciplinas(statusMap);
