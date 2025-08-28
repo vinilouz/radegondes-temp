@@ -1092,7 +1092,7 @@ function DisciplinaDetalhes() {
               {/* Header da lista */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 120px 180px 150px',
+                gridTemplateColumns: '1fr 120px 180px 150px 150px',
                 gap: '20px',
                 padding: '12px 16px',
                 backgroundColor: 'var(--darkmode-bg-tertiary)',
@@ -1105,6 +1105,7 @@ function DisciplinaDetalhes() {
                 <div>Nome do Tópico</div>
                 <div style={{ textAlign: 'center' }}>Timer</div>
                 <div style={{ textAlign: 'center' }}>Questões</div>
+                <div style={{ textAlign: 'center' }}>Performance</div>
                 <div style={{ textAlign: 'center' }}>Ações</div>
               </div>
 
@@ -1115,7 +1116,7 @@ function DisciplinaDetalhes() {
                     key={key}
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '1fr 120px 180px 150px',
+                      gridTemplateColumns: '1fr 120px 180px 180px 150px',
                       gap: '20px',
                       padding: '16px',
                       backgroundColor: 'var(--darkmode-bg-secondary)',
@@ -1175,10 +1176,10 @@ function DisciplinaDetalhes() {
                             fontWeight: '500',
                             fontSize: '12px'
                           }}>
-                            {statusTopicos[topico]?.tipo === 'estudando' ? 'Estudando': 'Já estudei' }
+                            {statusTopicos[topico]?.tipo === 'estudando' ? 'Estudando' : 'Já estudei'}
                           </span>
                         )}
-                       
+
                         {verificarTopicoAgendado(topico) && (
                           <>
                             <span style={{
@@ -1310,6 +1311,27 @@ function DisciplinaDetalhes() {
                               <path d="M10 14L12 12M12 12L14 10M12 12L10 10M12 12L14 14M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                             {questoesErradas}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Perfomance style */}
+                    {(() => {
+                      const ultimoRegistro = ultimosRegistrosPorTopico[topico];
+                      const questoesPlanejadas = ultimoRegistro ? (parseInt(ultimoRegistro.questoesPlanejadas) || 0) : 0;
+                      const questoesRealizadas = ultimoRegistro ? (parseInt(ultimoRegistro.questoesRealizadas) || 0) : 0;
+                      const questoesErradas = Math.max(0, questoesPlanejadas - questoesRealizadas);
+                      const rendimento = ((questoesRealizadas - questoesErradas) / questoesPlanejadas) * 100 || '';
+
+                      return (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <div style={{ textAlign: 'center' }}>
+                            {rendimento ? `${rendimento.toFixed(2)}%` : ''}
                           </div>
                         </div>
                       );
