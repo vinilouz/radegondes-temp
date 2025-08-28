@@ -67,7 +67,7 @@ function PlanoDetalhes() {
     fetchPlano();
     fetchStatusDisciplinas();
     fetchTopicosAgendados();
-    
+
     const searchParams = new URLSearchParams(location.search);
     if (searchParams.get('edit') === 'true') {
       const newUrl = window.location.pathname;
@@ -81,10 +81,10 @@ function PlanoDetalhes() {
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const shouldEdit = searchParams.get('edit') === 'true';
-    
+
     if (shouldEdit && !jaVerificouModal) {
       console.log('🎯 Parâmetro edit=true detectado, configurando para abrir modal...');
-      
+
       // Limpar URL imediatamente
       const newUrl = window.location.pathname;
       window.history.replaceState({}, '', newUrl);
@@ -97,27 +97,27 @@ function PlanoDetalhes() {
   useEffect(() => {
     if (deveAbrirModalAutomatico && plano && plano.nome && !loading && !showEditModal) {
       console.log('🎯 Verificando se deve abrir modal para plano carregado...');
-      
+
       const isPersonalizado = isPlanoPersonalizado(plano);
       const semDisciplinas = !plano.disciplinasDetalhadas || plano.disciplinasDetalhadas.length === 0;
-      
+
       console.log('🔍 Verificações finais:', {
         isPersonalizado,
         semDisciplinas,
         editais: plano.editais,
         shouldOpenModal: isPersonalizado && semDisciplinas
       });
-      
+
       if (isPersonalizado && semDisciplinas) {
         console.log('✅ ABRINDO MODAL AUTOMATICAMENTE!');
-        
+
         const timer = setTimeout(() => {
           console.log('⏰ Timer executado, abrindo modal...');
           setShowEditModal(true);
           setIsClosing(false);
           setDeveAbrirModalAutomatico(false); // Reset flag
         }, 300);
-        
+
         return () => {
           console.log('🧹 Limpando timer...');
           clearTimeout(timer);
@@ -137,7 +137,7 @@ function PlanoDetalhes() {
 
   const fetchStatusDisciplinas = async () => {
     if (!token) return;
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/registros-estudo?limit=1000`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -146,9 +146,9 @@ function PlanoDetalhes() {
       if (response.ok) {
         const data = await response.json();
         const registros = data.registros || [];
-        
+
         const statusMap = {};
-        
+
         registros.forEach(registro => {
           if (registro.disciplinaId && registro.tempoEstudo > 0) {
             statusMap[registro.disciplinaId] = true;
@@ -171,7 +171,7 @@ function PlanoDetalhes() {
 
   const fetchTopicosAgendados = async () => {
     if (!token) return;
-    
+
     try {
       // Buscar registros de estudo com agendamento
       const response = await fetch(`${API_BASE_URL}/api/registros-estudo?dataOpcao=agendar&limit=1000`, {
@@ -202,7 +202,7 @@ function PlanoDetalhes() {
     try {
       const timestamp = new Date().getTime();
       const response = await fetch(`${API_BASE_URL}/api/planos/${id}?_t=${timestamp}`, {
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${token}`,
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
@@ -238,12 +238,12 @@ function PlanoDetalhes() {
       editaisLength: plano?.editais?.length,
       isArray: Array.isArray(plano?.editais)
     });
-    
+
     if (!plano?.editais || !Array.isArray(plano.editais) || plano.editais.length === 0) {
       console.log('✅ É personalizado: sem editais ou array vazio');
       return true;
     }
-    
+
     const resultado = plano.editais.some(edital => {
       if (!edital || typeof edital !== 'object' || !edital.nome) {
         console.log('✅ É personalizado: edital inválido');
@@ -254,7 +254,7 @@ function PlanoDetalhes() {
       console.log('🔍 Verificando edital:', { nome: edital.nome, nomeEdital, isPersonalizado });
       return isPersonalizado;
     });
-    
+
     console.log('🎯 Resultado final isPlanoPersonalizado:', resultado);
     return resultado;
   };
@@ -277,7 +277,7 @@ function PlanoDetalhes() {
   const closeEditModal = () => {
     setJaVerificouModal(true);
     setIsClosing(true);
-    
+
     setTimeout(() => {
       setShowEditModal(false);
       setIsClosing(false);
@@ -308,6 +308,11 @@ function PlanoDetalhes() {
 
   const handleAdicionarTopico = () => {
     if (novoTopico.trim()) {
+      const topicoJaExiste = formDataDisciplina.topicos.includes(novoTopico.trim());
+      if (topicoJaExiste) {
+        alert('Este tópico já existe!');
+        return;
+      }
       setFormDataDisciplina(prev => ({
         ...prev,
         topicos: [...prev.topicos, novoTopico.trim()]
@@ -333,12 +338,12 @@ function PlanoDetalhes() {
 
   const handleEditDisciplinaSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!disciplinaSelecionada) {
       alert('Nenhuma disciplina selecionada!');
       return;
     }
-    
+
     try {
       const testResponse = await fetch(`${API_BASE_URL}/api/planos`, {
         method: 'GET',
@@ -354,10 +359,10 @@ function PlanoDetalhes() {
       alert('Não foi possível conectar ao servidor. Verifique se o backend está rodando na porta 5000.');
       return;
     }
-    
+
     try {
       const url = `${API_BASE_URL}/api/planos/${id}/disciplinas/${disciplinaSelecionada._id}`;
-      
+
       const requestData = {
         nome: formDataDisciplina.nome,
         cor: formDataDisciplina.cor,
@@ -372,29 +377,29 @@ function PlanoDetalhes() {
         },
         body: JSON.stringify(requestData)
       });
-      
+
       const responseText = await response.text();
-      
+
       if (response.ok) {
         let updatedPlano;
         try {
           updatedPlano = JSON.parse(responseText);
-          
+
           const disciplinaAtualizada = updatedPlano.disciplinasDetalhadas?.find(d => d._id === disciplinaSelecionada._id);
           if (!disciplinaAtualizada) {
           }
-          
+
         } catch (parseError) {
           alert('Erro ao processar resposta do servidor');
           return;
         }
-        
+
         setPlano(updatedPlano);
-        
+
         await new Promise(resolve => setTimeout(resolve, 500));
-        
+
         await fetchPlano();
-        
+
         closeEditDisciplinaModal();
         alert('Disciplina atualizada com sucesso!');
       } else {
@@ -480,32 +485,32 @@ function PlanoDetalhes() {
 
   const handleRemoverDisciplina = async (disciplina) => {
     const confirmDelete = window.confirm(`Tem certeza que deseja remover a disciplina "${disciplina.nome}" do estudo?`);
-    
+
     if (!confirmDelete) return;
-    
+
     const originalText = event.target.textContent;
     if (event.target) {
       event.target.textContent = 'Removendo...';
       event.target.disabled = true;
     }
-    
+
     try {
       console.log('=== REMOVENDO DISCIPLINA ===');
       console.log('Disciplina:', disciplina);
       console.log('Plano ID:', id);
       console.log('URL:', `${API_BASE_URL}/api/planos/${id}/disciplinas/${disciplina._id}`);
       console.log('Token presente:', !!token);
-      
+
       const response = await fetch(`${API_BASE_URL}/api/planos/${id}/disciplinas/${disciplina._id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       console.log('Response status:', response.status);
       console.log('Response ok:', response.ok);
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log('Response data:', data);
@@ -529,7 +534,7 @@ function PlanoDetalhes() {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/planos/${id}`, {
         method: 'PUT',
@@ -551,11 +556,11 @@ function PlanoDetalhes() {
 
   const handleDelete = async () => {
     if (!plano.nome) return;
-    
+
     const confirmDelete = window.confirm(`Tem certeza que deseja excluir o estudo "${plano.nome}"?`);
-    
+
     if (!confirmDelete) return;
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/planos/${id}`, {
         method: 'DELETE',
@@ -577,7 +582,7 @@ function PlanoDetalhes() {
     const horas = Math.floor(segundos / 3600);
     const minutos = Math.floor((segundos % 3600) / 60);
     const segundosRestantes = segundos % 60;
-    
+
     if (horas > 0) {
       return `${horas}h ${minutos.toString().padStart(2, '0')}m ${segundosRestantes.toString().padStart(2, '0')}s`;
     } else if (minutos > 0) {
@@ -591,28 +596,28 @@ function PlanoDetalhes() {
     return (
       <>
         <header className='flex flex-col head'>
-          <div style={{ 
-            height: '32px', 
-            width: '200px', 
+          <div style={{
+            height: '32px',
+            width: '200px',
             background: 'linear-gradient(90deg, var(--darkmode-bg-secondary) 25%, var(--darkmode-bg-tertiary) 50%, var(--darkmode-bg-secondary) 75%)',
             backgroundSize: '200% 100%',
             animation: 'skeleton-loading 1.5s infinite',
             borderRadius: '4px',
             marginBottom: '8px'
           }} />
-          <div style={{ 
-            height: '16px', 
-            width: '300px', 
+          <div style={{
+            height: '16px',
+            width: '300px',
             background: 'linear-gradient(90deg, var(--darkmode-bg-secondary) 25%, var(--darkmode-bg-tertiary) 50%, var(--darkmode-bg-secondary) 75%)',
             backgroundSize: '200% 100%',
             animation: 'skeleton-loading 1.5s infinite',
             borderRadius: '4px'
           }} />
         </header>
-        
+
         <SkeletonStats count={3} />
         <SkeletonList count={5} />
-        
+
         <style>
           {`
             @keyframes skeleton-loading {
@@ -627,10 +632,10 @@ function PlanoDetalhes() {
 
   if (!plano || !plano.nome) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         height: '400px',
         fontSize: '18px',
         color: 'var(--darkmode-text-secondary)'
@@ -790,57 +795,57 @@ function PlanoDetalhes() {
           <div className="plano-hero-content">
             <div className="plano-info">
               <h1 className="plano-hero-title">{plano.nome}</h1>
-              
+
               {/* Exibir informações de Instituição e Edital APENAS para estudos não-personalizados */}
-              {plano.editais && Array.isArray(plano.editais) && plano.editais.length > 0 && 
-               /* @ts-ignore */ 
-               plano.editais.some(edital => {
-                 if (!edital || typeof edital !== 'object' || !edital.nome) return false;
-                 const nomeEdital = edital.nome.toLowerCase().trim();
-                 return nomeEdital !== 'editalpersonalizado' && nomeEdital !== 'personalizado';
-               }) && (
-                <div style={{
-                  marginTop: '12px',
-                  marginBottom: '8px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '6px'
-                }}>
-                  {/* @ts-ignore */}
-                  {plano.editais
-                    .filter(edital => {
-                      if (!edital || typeof edital !== 'object' || !edital.nome) return false;
-                      const nomeEdital = edital.nome.toLowerCase().trim();
-                      return nomeEdital !== 'editalpersonalizado' && nomeEdital !== 'personalizado';
-                    })
-                    .map((edital, index) => (
-                      <div key={index} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '14px',
-                        color: 'var(--darkmode-text-secondary)'
-                      }}>
-                        {/* @ts-ignore */}
-                        <span style={{
-                          fontWeight: '600',
-                          color: '#E66912'
+              {plano.editais && Array.isArray(plano.editais) && plano.editais.length > 0 &&
+                /* @ts-ignore */
+                plano.editais.some(edital => {
+                  if (!edital || typeof edital !== 'object' || !edital.nome) return false;
+                  const nomeEdital = edital.nome.toLowerCase().trim();
+                  return nomeEdital !== 'editalpersonalizado' && nomeEdital !== 'personalizado';
+                }) && (
+                  <div style={{
+                    marginTop: '12px',
+                    marginBottom: '8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px'
+                  }}>
+                    {/* @ts-ignore */}
+                    {plano.editais
+                      .filter(edital => {
+                        if (!edital || typeof edital !== 'object' || !edital.nome) return false;
+                        const nomeEdital = edital.nome.toLowerCase().trim();
+                        return nomeEdital !== 'editalpersonalizado' && nomeEdital !== 'personalizado';
+                      })
+                      .map((edital, index) => (
+                        <div key={index} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '14px',
+                          color: 'var(--darkmode-text-secondary)'
                         }}>
-                          {edital.instituicao && edital.instituicao.nome 
-                            ? edital.instituicao.nome 
-                            : 'Instituição'}
-                          {edital.instituicao && edital.instituicao.sigla && (
-                            <span> ({edital.instituicao.sigla})</span>
-                          )}
-                        </span>
-                        <span> - </span>
-                        {/* @ts-ignore */}
-                        <span>{edital.nome}</span>
-                      </div>
-                    ))}
-                </div>
-              )}
-              
+                          {/* @ts-ignore */}
+                          <span style={{
+                            fontWeight: '600',
+                            color: '#E66912'
+                          }}>
+                            {edital.instituicao && edital.instituicao.nome
+                              ? edital.instituicao.nome
+                              : 'Instituição'}
+                            {edital.instituicao && edital.instituicao.sigla && (
+                              <span> ({edital.instituicao.sigla})</span>
+                            )}
+                          </span>
+                          <span> - </span>
+                          {/* @ts-ignore */}
+                          <span>{edital.nome}</span>
+                        </div>
+                      ))}
+                  </div>
+                )}
+
               <p className="plano-hero-description">{plano.descricao || 'Sem descrição'}</p>
             </div>
             <div className="plano-actions">
@@ -875,10 +880,10 @@ function PlanoDetalhes() {
           <div className="stat-card-dashboard">
             <div className="stat-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M4 19.5C4 20.3284 4.67157 21 5.5 21H18.5C19.3284 21 20 20.3284 20 19.5V6.5C20 5.67157 19.3284 5 18.5 5H5.5C4.67157 5 4 5.67157 4 6.5V19.5Z" stroke="#E66912" strokeWidth="1.5" fill="none"/>
-                <path d="M7 9H17" stroke="#E66912" strokeWidth="1.5" strokeLinecap="round"/>
-                <path d="M7 13H17" stroke="#E66912" strokeWidth="1.5" strokeLinecap="round"/>
-                <path d="M7 17H14" stroke="#E66912" strokeWidth="1.5" strokeLinecap="round"/>
+                <path d="M4 19.5C4 20.3284 4.67157 21 5.5 21H18.5C19.3284 21 20 20.3284 20 19.5V6.5C20 5.67157 19.3284 5 18.5 5H5.5C4.67157 5 4 5.67157 4 6.5V19.5Z" stroke="#E66912" strokeWidth="1.5" fill="none" />
+                <path d="M7 9H17" stroke="#E66912" strokeWidth="1.5" strokeLinecap="round" />
+                <path d="M7 13H17" stroke="#E66912" strokeWidth="1.5" strokeLinecap="round" />
+                <path d="M7 17H14" stroke="#E66912" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </div>
             <div className="stat-content">
@@ -889,10 +894,10 @@ function PlanoDetalhes() {
           <div className="stat-card-dashboard">
             <div className="stat-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 5H7C5.89543 5 5 5.89543 5 7V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V7C19 5.89543 18.1046 5 17 5H15" stroke="#E66912" strokeWidth="1.5"/>
-                <path d="M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5C15 6.10457 14.1046 7 13 7H11C9.89543 7 9 6.10457 9 5Z" stroke="#E66912" strokeWidth="1.5"/>
-                <path d="M9 12H15" stroke="#E66912" strokeWidth="1.5" strokeLinecap="round"/>
-                <path d="M9 16H15" stroke="#E66912" strokeWidth="1.5" strokeLinecap="round"/>
+                <path d="M9 5H7C5.89543 5 5 5.89543 5 7V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V7C19 5.89543 18.1046 5 17 5H15" stroke="#E66912" strokeWidth="1.5" />
+                <path d="M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5C15 6.10457 14.1046 7 13 7H11C9.89543 7 9 6.10457 9 5Z" stroke="#E66912" strokeWidth="1.5" />
+                <path d="M9 12H15" stroke="#E66912" strokeWidth="1.5" strokeLinecap="round" />
+                <path d="M9 16H15" stroke="#E66912" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </div>
             <div className="stat-content">
@@ -908,8 +913,8 @@ function PlanoDetalhes() {
           <div className="stat-card-dashboard">
             <div className="stat-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="9" stroke="#E66912" strokeWidth="1.5"/>
-                <path d="M12 7V12L16 16" stroke="#E66912" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="12" cy="12" r="9" stroke="#E66912" strokeWidth="1.5" />
+                <path d="M12 7V12L16 16" stroke="#E66912" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
             <div className="stat-content">
@@ -939,10 +944,10 @@ function PlanoDetalhes() {
               const topicosConcluidos = disciplina.topicosEstudados || 0;
               const topicosTotal = disciplina.topicosTotal || disciplina.topicos?.length || 0;
               const percentualConclusao = topicosTotal > 0 ? (topicosConcluidos / topicosTotal) * 100 : 0;
-              
+
               // Verificar se a disciplina está sendo estudada (tem tópicos com timer > 0)
               const estaEstudando = verificarDisciplinaEstudando(disciplina);
-              
+
               let statusEstudo, statusCor;
               if (estaEstudando) {
                 statusEstudo = 'Estudando';
@@ -969,12 +974,12 @@ function PlanoDetalhes() {
                       <div className="disciplina-info">
                         <div className="disciplina-nome">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div 
+                            <div
                               className="disciplina-cor-indicator"
-                              style={{ 
-                                width: '8px', 
-                                height: '8px', 
-                                borderRadius: '50%', 
+                              style={{
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
                                 backgroundColor: cores[disciplina.cor] || cores.azul,
                                 flexShrink: 0
                               }}
@@ -982,9 +987,9 @@ function PlanoDetalhes() {
                             <span>{disciplina.nome}</span>
                           </div>
                           {statusEstudo !== 'Não iniciado' && (
-                            <span 
+                            <span
                               className="status-badge"
-                              style={{ 
+                              style={{
                                 backgroundColor: `${statusCor}15`,
                                 color: statusCor,
                                 border: `1px solid ${statusCor}30`,
@@ -1068,7 +1073,7 @@ function PlanoDetalhes() {
 
       {/* Modal de Edição */}
       {showEditModal && (
-        <div 
+        <div
           className="modal-overlay"
           style={{
             position: 'fixed',
@@ -1090,7 +1095,7 @@ function PlanoDetalhes() {
             }
           }}
         >
-          <div 
+          <div
             className="modal-content"
             style={{
               backgroundColor: 'var(--darkmode-bg-secondary)',
@@ -1108,12 +1113,12 @@ function PlanoDetalhes() {
             <h2 style={{ marginBottom: '20px', fontSize: '24px', fontWeight: '600' }}>
               Editar Estudo
             </h2>
-            
+
             <form onSubmit={handleEditSubmit}>
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '8px', 
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
                   fontWeight: '500',
                   color: 'var(--darkmode-text-primary)'
                 }}>
@@ -1137,11 +1142,11 @@ function PlanoDetalhes() {
                   required
                 />
               </div>
-              
+
               <div style={{ marginBottom: '30px' }}>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '8px', 
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
                   fontWeight: '500',
                   color: 'var(--darkmode-text-primary)'
                 }}>
@@ -1166,7 +1171,7 @@ function PlanoDetalhes() {
                   placeholder="Adicione uma descrição para o estudo..."
                 />
               </div>
-              
+
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                 <button
                   type="button"
@@ -1207,7 +1212,7 @@ function PlanoDetalhes() {
 
       {/* Modal de Edição de Disciplina */}
       {showEditDisciplinaModal && (
-        <div 
+        <div
           id="edit-disciplina-modal-overlay"
           style={{
             position: 'fixed',
@@ -1229,7 +1234,7 @@ function PlanoDetalhes() {
             }
           }}
         >
-          <div 
+          <div
             style={{
               backgroundColor: 'var(--darkmode-bg-secondary)',
               borderRadius: '12px',
@@ -1246,19 +1251,19 @@ function PlanoDetalhes() {
             <h2 style={{ marginBottom: '20px', fontSize: '24px', fontWeight: '600' }}>
               Editar Disciplina
             </h2>
-            
+
             <form onSubmit={handleEditDisciplinaSubmit}>
               {/* Nome e Cor lado a lado */}
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: '2fr 1fr', 
-                gap: '20px', 
-                marginBottom: '20px' 
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '2fr 1fr',
+                gap: '20px',
+                marginBottom: '20px'
               }}>
                 <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '8px', 
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
                     fontWeight: '500',
                     color: 'var(--darkmode-text-primary)'
                   }}>
@@ -1282,11 +1287,11 @@ function PlanoDetalhes() {
                     required
                   />
                 </div>
-                
+
                 <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '8px', 
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
                     fontWeight: '500',
                     color: 'var(--darkmode-text-primary)'
                   }}>
@@ -1299,17 +1304,17 @@ function PlanoDetalhes() {
                   />
                 </div>
               </div>
-              
+
               <div style={{ marginBottom: '30px' }}>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '8px', 
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
                   fontWeight: '500',
                   color: 'var(--darkmode-text-primary)'
                 }}>
                   Tópicos
                 </label>
-                
+
                 {/* Lista de tópicos existentes */}
                 <div style={{ marginBottom: '15px' }}>
                   {formDataDisciplina.topicos.map((topico, index) => (
@@ -1373,7 +1378,7 @@ function PlanoDetalhes() {
                           )}
                         </div>
                       )}
-                      
+
                       <button
                         type="button"
                         onClick={() => setEditandoTopico(editandoTopico === index ? null : index)}
@@ -1390,7 +1395,7 @@ function PlanoDetalhes() {
                       >
                         {editandoTopico === index ? 'Salvar' : 'Editar'}
                       </button>
-                      
+
                       <button
                         type="button"
                         onClick={() => handleRemoverTopico(index)}
@@ -1410,7 +1415,7 @@ function PlanoDetalhes() {
                     </div>
                   ))}
                 </div>
-                
+
                 {/* Adicionar novo tópico */}
                 <div style={{
                   display: 'flex',
@@ -1459,7 +1464,7 @@ function PlanoDetalhes() {
                   </button>
                 </div>
               </div>
-              
+
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                 <button
                   type="button"
@@ -1500,7 +1505,7 @@ function PlanoDetalhes() {
 
       {/* Modal Nova Disciplina */}
       {showNovaDisciplinaModal && (
-        <div 
+        <div
           style={{
             position: 'fixed',
             top: 0,
@@ -1516,7 +1521,7 @@ function PlanoDetalhes() {
           }}
           onClick={closeNovaDisciplinaModal}
         >
-          <div 
+          <div
             style={{
               backgroundColor: 'var(--darkmode-bg-secondary)',
               borderRadius: '12px',
@@ -1541,7 +1546,7 @@ function PlanoDetalhes() {
             }}>
               Nova Disciplina
             </h2>
-            
+
             <form onSubmit={(e) => {
               e.preventDefault();
               handleSalvarNovaDisciplina();
@@ -1553,9 +1558,9 @@ function PlanoDetalhes() {
                 marginBottom: '25px'
               }}>
                 <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '8px', 
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
                     fontWeight: '500',
                     color: 'var(--darkmode-text-primary)'
                   }}>
@@ -1580,11 +1585,11 @@ function PlanoDetalhes() {
                     required
                   />
                 </div>
-                
+
                 <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '8px', 
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
                     fontWeight: '500',
                     color: 'var(--darkmode-text-primary)'
                   }}>
@@ -1597,17 +1602,17 @@ function PlanoDetalhes() {
                   />
                 </div>
               </div>
-              
+
               <div style={{ marginBottom: '30px' }}>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '8px', 
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
                   fontWeight: '500',
                   color: 'var(--darkmode-text-primary)'
                 }}>
                   Tópicos
                 </label>
-                
+
                 {/* Lista de tópicos existentes */}
                 <div style={{ marginBottom: '15px' }}>
                   {formDataNovaDisciplina.topicos.map((topico, index) => (
@@ -1627,7 +1632,7 @@ function PlanoDetalhes() {
                       <span style={{ flex: 1, fontSize: '14px', color: 'var(--darkmode-text-primary)' }}>
                         {index + 1}. {topico}
                       </span>
-                      
+
                       <button
                         type="button"
                         onClick={() => handleRemoverTopicoNova(index)}
@@ -1647,7 +1652,7 @@ function PlanoDetalhes() {
                     </div>
                   ))}
                 </div>
-                
+
                 {/* Adicionar novo tópico */}
                 <div style={{
                   display: 'flex',
@@ -1695,10 +1700,10 @@ function PlanoDetalhes() {
                   </button>
                 </div>
               </div>
-              
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'flex-end', 
+
+              <div style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
                 gap: '12px',
                 paddingTop: '20px',
                 borderTop: '1px solid var(--darkmode-border-secondary)'
