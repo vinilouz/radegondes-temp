@@ -19,7 +19,7 @@ const seedDatabase = require('./config/seedDatabase');
 
 
 const app = express();
-const port = 5400|| 5400;
+const port = process.env.PORT || 5000;
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -63,19 +63,20 @@ const upload = multer({
   }
 });
 
-// Remover toda a lógica de isDocker e use apenas a variável de ambiente
-const mongoUri = process.env.MONGO_URI;
-
-mongoose.connect(mongoUri)
+mongoose.connect(process.env.MONGO_URI)
   .then(async () => {
-    console.log(`Conectado ao MongoDB!`);
+    console.log('Conectado ao MongoDB Atlas!');
     await seedDatabase();
   })
-  .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
+  .catch(err => console.error('Erro ao conectar ao MongoDB Atlas:', err));
 
 app.use(express.json());
-app.use(cors());
-
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? [process.env.FRONTEND_URL, process.env.BACKEND_URL].filter(Boolean) 
+    : true,
+  credentials: true
+}));
 app.use('/uploads', express.static('uploads'));
 
 
@@ -1061,16 +1062,9 @@ app.post('/api/planos/:planoId/disciplinas', protect, async (req, res) => {
     console.log('⏰ Timestamp:', new Date().toISOString());
     console.log('🔄 Este endpoint foi ATUALIZADO para resolver o erro!');
     console.log('');
+    
     const { nome, cor, topicos } = req.body;
     const { planoId } = req.params;
-
-    // Verificar se já existe algum tópico igual (case insensitive)
-    const topicosSet = new Set(topicos.map(t => t.toLowerCase()));
-    for (const topico of topicos) {
-      if (topicosSet.has(topico.toLowerCase())) {
-        return res.status(400).json({ error: 'Os tópicos não podem ser iguais.' });
-      }
-    }
     
     console.log('=== DADOS DA REQUISIÇÃO ===');
     console.log('PlanoId:', planoId);
@@ -2143,4 +2137,3 @@ app.get('/api/admin/revisoes', protect, isAdmin, async (req, res) => {
 app.listen(port, () => {
   console.log(`Backend Radegondes rodando em http://localhost:${port}`);
 });
-
