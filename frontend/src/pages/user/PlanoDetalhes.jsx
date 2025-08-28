@@ -437,6 +437,11 @@ function PlanoDetalhes() {
 
   const handleAdicionarTopicoNova = () => {
     if (novoTopico.trim()) {
+      const topicoJaExiste = formDataNovaDisciplina.topicos.includes(novoTopico.trim());
+      if (topicoJaExiste) {
+        alert('Este tópico já existe!');
+        return;
+      }
       setFormDataNovaDisciplina(prev => ({
         ...prev,
         topicos: [...prev.topicos, novoTopico.trim()]
