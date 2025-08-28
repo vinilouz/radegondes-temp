@@ -1066,6 +1066,13 @@ app.post('/api/planos/:planoId/disciplinas', protect, async (req, res) => {
     const { nome, cor, topicos } = req.body;
     const { planoId } = req.params;
     
+    const topicosSet = new Set(topicos.map(t => t.toLowerCase()));
+    for (const topico of topicos) {
+      if (topicosSet.has(topico.toLowerCase())) {
+        return res.status(400).json({ error: 'Os tópicos não podem ser iguais.' });
+      }
+    }
+
     console.log('=== DADOS DA REQUISIÇÃO ===');
     console.log('PlanoId:', planoId);
     console.log('Nome da disciplina:', nome);
