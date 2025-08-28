@@ -877,6 +877,15 @@ app.put('/api/planos/:planoId/disciplinas/:disciplinaId', protect, async (req, r
     console.log('Atualizando disciplina:', { planoId, disciplinaId, nome, cor, topicos });
     console.log('User ID:', req.user._id);
     
+    if (topicos && Array.isArray(topicos)) {
+      const topicosExistentes = new Set(topicos);
+      for (const topico of topicos) {
+        if (topicosSet.has(topico.toLowerCase())) {
+          return res.status(400).json({ error: 'Os tópicos não podem ser iguais.' });
+        }
+      }
+    }
+
     const plano = await Plano.findOne({ 
       _id: planoId, 
       usuario: req.user._id 
