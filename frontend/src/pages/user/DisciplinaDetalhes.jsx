@@ -481,7 +481,7 @@ function DisciplinaDetalhes() {
   // Função auxiliar para verificar se um tópico está agendado
   const verificarTopicoAgendado = (topico) => {
     const status = statusTopicos[topico];
-    return status && status.tipo === 'agendar' && status.dataAgendada;
+    return status && status.temAgendamento && status.dataAgendada;
   };
 
   // Função para formatar data relativa com horário
@@ -506,11 +506,11 @@ function DisciplinaDetalhes() {
     if (diffDays === 0) {
       textoRelativo = 'Hoje';
     } else if (diffDays === 1) {
-      textoRelativo = 'Amanhã';
+      textoRelativo = 'Hoje';
     } else if (diffDays === -1) {
       textoRelativo = 'Ontem';
     } else if (diffDays > 1) {
-      textoRelativo = `Em ${diffDays} dias`;
+      textoRelativo = `Em ${diffDays -1 } dias`;
     } else if (diffDays < -1) {
       textoRelativo = `${Math.abs(diffDays)} dias atrás`;
     }
@@ -1792,19 +1792,13 @@ function AbaInformacoes({ topico, statusTopicos, setStatusTopicos, material, set
   // Função para atualizar status quando data opção muda
   const handleDataOpcaoChange = (novaOpcao) => {
     setDataOpcao(novaOpcao);
-    setStatusTopicos(prev => {
-      let dataAgendada = '';
-      if (novaOpcao === 'agendar') {
-        dataAgendada = prev[topico]?.dataAgendada || '';
+    setStatusTopicos(prev => ({
+      ...prev,
+      [topico]: {
+        ...prev[topico], // Preservar agendamento e outros dados
+        tipo: novaOpcao
       }
-      return {
-        ...prev,
-        [topico]: {
-          tipo: novaOpcao,
-          dataAgendada
-        }
-      };
-    });
+    }));
   };
 
   // Função para atualizar horário agendado
@@ -1827,7 +1821,7 @@ function AbaInformacoes({ topico, statusTopicos, setStatusTopicos, material, set
       ...prev,
       [topico]: {
         ...prev[topico],
-        tipo: 'agendar',
+        temAgendamento: true, // Marcar o checkbox automaticamente
         dataAgendada: prev[topico]?.dataAgendada || '',
         horarioAgendado: novoHorario
       }
@@ -1860,7 +1854,7 @@ function AbaInformacoes({ topico, statusTopicos, setStatusTopicos, material, set
         ...prev,
         [topico]: {
           ...topicoPrev,
-          tipo: dataOpcao,
+          temAgendamento: true, // Marcar o checkbox automaticamente
           dataAgendada: novaData,
           horarioAgendado: novoHorario
         }
@@ -1895,8 +1889,8 @@ function AbaInformacoes({ topico, statusTopicos, setStatusTopicos, material, set
               type="radio"
               name="statusEstudo"
               value="estudando"
-              checked={dataOpcao === 'estudando'}
-              onChange={(e) => handleDataOpcaoChange(e.target.value)}
+              checked={dataOpcao === 'estudando' || (dataOpcao !== 'ja-estudei' && dataOpcao !== 'estudando')}
+              onChange={(e) => handleDataOpcaoChange('estudando')}
               style={{ marginRight: '4px' }}
             />
             <span style={{ color: 'var(--darkmode-text-primary)', fontSize: '14px' }}>Estudando</span>
@@ -1907,190 +1901,196 @@ function AbaInformacoes({ topico, statusTopicos, setStatusTopicos, material, set
               name="statusEstudo"
               value="ja-estudei"
               checked={dataOpcao === 'ja-estudei'}
-              onChange={(e) => handleDataOpcaoChange(e.target.value)}
+              onChange={(e) => handleDataOpcaoChange('ja-estudei')}
               style={{ marginRight: '4px' }}
             />
             <span style={{ color: 'var(--darkmode-text-primary)', fontSize: '14px' }}>Já estudei</span>
           </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+        </div>
+      </div>
+      {/* Linha 2 - Agendamento (independente) */}
+      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginTop: '10px' }}>
+        <label style={{
+          fontSize: '16px',
+          fontWeight: '600',
+          color: 'var(--darkmode-text-primary)',
+        }}>
+          Agendamento
+        </label>
+        <input
+          type="checkbox"
+          checked={statusTopicos[topico]?.temAgendamento || false}
+          onChange={(e) => {
+            setStatusTopicos(prev => ({
+              ...prev,
+              [topico]: {
+                ...prev[topico],
+                temAgendamento: e.target.checked,
+                // Se desmarcar o agendamento, limpar os dados de agendamento
+                ...(e.target.checked ? {} : { dataAgendada: '', horarioAgendado: '' })
+              }
+            }));
+          }}
+          style={{ marginLeft: '10px' }}
+        />
+      </div>
+      <div>
+        <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Campos de agendamento */}
+          <div
+            style={{
+              position: 'relative',
+              cursor: 'pointer'
+            }}
+            onClick={() => dateInputRef.current?.showPicker?.() || dateInputRef.current?.focus()}
+          >
             <input
-              type="radio"
-              name="statusEstudo"
-              value="agendar"
-              checked={dataOpcao === 'agendar'}
-              onChange={(e) => handleDataOpcaoChange(e.target.value)}
-              style={{ marginRight: '4px' }}
+              ref={dateInputRef}
+              type="date"
+              disabled={!statusTopicos[topico]?.temAgendamento}
+              min={new Date().toISOString().split('T')[0]} // Data mínima é hoje
+              value={statusTopicos[topico]?.dataAgendada || ''}
+              onChange={(e) => handleDataAgendadaChange(e.target.value)}
+              style={{
+                padding: '8px 35px 8px 12px',
+                border: '1px solid var(--darkmode-border-secondary)',
+                borderRadius: '6px',
+                fontSize: '14px',
+                backgroundColor: 'var(--darkmode-bg-secondary)',
+                color: 'var(--darkmode-text-primary)',
+                cursor: 'pointer',
+                width: '150px'
+              }}
             />
-            <span style={{ color: 'var(--darkmode-text-primary)', fontSize: '14px' }}>Agendar</span>
-          </label>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              style={{
+                position: 'absolute',
+                right: '10px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                pointerEvents: 'none',
+                zIndex: 1
+              }}
+            >
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="#FF6B35" strokeWidth="2" />
+              <line x1="16" y1="2" x2="16" y2="6" stroke="#FF6B35" strokeWidth="2" />
+              <line x1="8" y1="2" x2="8" y2="6" stroke="#FF6B35" strokeWidth="2" />
+              <line x1="3" y1="10" x2="21" y2="10" stroke="#FF6B35" strokeWidth="2" />
+            </svg>
+          </div>
+          <div
+            style={{
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              cursor: 'pointer'
+            }}
+            onClick={() => timeInputRef.current?.showPicker?.() || timeInputRef.current?.focus()}
+          >
+            <input
+              ref={timeInputRef}
+              type="time"
+              disabled={!statusTopicos[topico]?.temAgendamento}
+              min={(() => {
+                const dataAgendada = statusTopicos[topico]?.dataAgendada;
+                const hoje = new Date().toISOString().split('T')[0];
+                // Se a data agendada for hoje, definir horário mínimo como agora
+                if (dataAgendada === hoje) {
+                  const agora = new Date();
+                  return agora.toTimeString().slice(0, 5); // formato HH:MM
+                }
+                return ''; // Sem restrição de horário para datas futuras
+              })()}
+              value={statusTopicos[topico]?.horarioAgendado || ''}
+              onChange={(e) => handleHorarioAgendadoChange(e.target.value)}
+              style={{
+                padding: '8px 35px 8px 12px',
+                border: '1px solid var(--darkmode-border-secondary)',
+                borderRadius: '6px',
+                fontSize: '14px',
+                backgroundColor: 'var(--darkmode-bg-secondary)',
+                color: 'var(--darkmode-text-primary)',
+                WebkitAppearance: 'none',
+                MozAppearance: 'textfield',
+                appearance: 'none',
+                cursor: 'pointer',
+                width: '120px'
+              }}
+            />
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              style={{
+                position: 'absolute',
+                right: '10px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                zIndex: 1,
+                pointerEvents: 'none'
+              }}
+            >
+              <path d="M12 6V12L16 14M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="#FF6B35" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+
+          {/* Botão Remover Agendamento */}
+          {(statusTopicos[topico]?.dataAgendada || statusTopicos[topico]?.horarioAgendado) && (
+            <button
+              disabled={!statusTopicos[topico]?.temAgendamento}
+              onClick={() => {
+                console.log('Removendo agendamento para tópico:', topico);
+                console.log('Status antes:', statusTopicos[topico]);
+
+                // Limpar agendamento
+                setStatusTopicos(prev => ({
+                  ...prev,
+                  [topico]: {
+                    ...prev[topico],
+                    dataAgendada: '',
+                    horarioAgendado: '',
+                    temAgendamento: false // Desmarcar o checkbox também
+                  }
+                }));
+
+                console.log('Agendamento removido');
+              }}
+              style={{
+                padding: '8px 12px',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid #EF4444',
+                borderRadius: '6px',
+                color: '#EF4444',
+                fontSize: '12px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+                e.target.style.transform = 'translateY(-1px)';
+                e.target.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.3)';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = 'none';
+              }}
+            >
+              Remover Agendamento
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Linha 2 - Agendamento (só aparece se agendar estiver selecionado) */}
-      {dataOpcao === 'agendar' && (
-        <div>
-          <label style={{
-            display: 'block',
-            fontSize: '14px',
-            fontWeight: '600',
-            color: 'var(--darkmode-text-primary)',
-            marginBottom: '8px'
-          }}>
-            Agendamento
-          </label>
-          <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* Campos de agendamento */}
-            <div
-              style={{
-                position: 'relative',
-                cursor: 'pointer'
-              }}
-              onClick={() => dateInputRef.current?.showPicker?.() || dateInputRef.current?.focus()}
-            >
-              <input
-                ref={dateInputRef}
-                type="date"
-                min={new Date().toISOString().split('T')[0]} // Data mínima é hoje
-                value={statusTopicos[topico]?.dataAgendada || ''}
-                onChange={(e) => handleDataAgendadaChange(e.target.value)}
-                style={{
-                  padding: '8px 35px 8px 12px',
-                  border: '1px solid var(--darkmode-border-secondary)',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  backgroundColor: 'var(--darkmode-bg-secondary)',
-                  color: 'var(--darkmode-text-primary)',
-                  cursor: 'pointer',
-                  width: '150px'
-                }}
-              />
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                style={{
-                  position: 'absolute',
-                  right: '10px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  pointerEvents: 'none',
-                  zIndex: 1
-                }}
-              >
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="#FF6B35" strokeWidth="2" />
-                <line x1="16" y1="2" x2="16" y2="6" stroke="#FF6B35" strokeWidth="2" />
-                <line x1="8" y1="2" x2="8" y2="6" stroke="#FF6B35" strokeWidth="2" />
-                <line x1="3" y1="10" x2="21" y2="10" stroke="#FF6B35" strokeWidth="2" />
-              </svg>
-            </div>
-            <div
-              style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                cursor: 'pointer'
-              }}
-              onClick={() => timeInputRef.current?.showPicker?.() || timeInputRef.current?.focus()}
-            >
-              <input
-                ref={timeInputRef}
-                type="time"
-                min={(() => {
-                  const dataAgendada = statusTopicos[topico]?.dataAgendada;
-                  const hoje = new Date().toISOString().split('T')[0];
-                  // Se a data agendada for hoje, definir horário mínimo como agora
-                  if (dataAgendada === hoje) {
-                    const agora = new Date();
-                    return agora.toTimeString().slice(0, 5); // formato HH:MM
-                  }
-                  return ''; // Sem restrição de horário para datas futuras
-                })()}
-                value={statusTopicos[topico]?.horarioAgendado || ''}
-                onChange={(e) => handleHorarioAgendadoChange(e.target.value)}
-                style={{
-                  padding: '8px 35px 8px 12px',
-                  border: '1px solid var(--darkmode-border-secondary)',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  backgroundColor: 'var(--darkmode-bg-secondary)',
-                  color: 'var(--darkmode-text-primary)',
-                  WebkitAppearance: 'none',
-                  MozAppearance: 'textfield',
-                  appearance: 'none',
-                  cursor: 'pointer',
-                  width: '120px'
-                }}
-              />
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                style={{
-                  position: 'absolute',
-                  right: '10px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  zIndex: 1,
-                  pointerEvents: 'none'
-                }}
-              >
-                <path d="M12 6V12L16 14M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="#FF6B35" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-
-            {/* Botão Remover Agendamento */}
-            {(statusTopicos[topico]?.dataAgendada || statusTopicos[topico]?.horarioAgendado) && (
-              <button
-                onClick={() => {
-                  console.log('Removendo agendamento para tópico:', topico);
-                  console.log('Status antes:', statusTopicos[topico]);
-
-                  // Limpar agendamento
-                  setStatusTopicos(prev => ({
-                    ...prev,
-                    [topico]: {
-                      ...prev[topico],
-                      dataAgendada: '',
-                      horarioAgendado: '',
-                      tipo: 'estudando' // Reset para o tipo padrão
-                    }
-                  }));
-
-                  console.log('Agendamento removido');
-                }}
-                style={{
-                  padding: '8px 12px',
-                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid #EF4444',
-                  borderRadius: '6px',
-                  color: '#EF4444',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  whiteSpace: 'nowrap'
-                }}
-                onMouseOver={(e) => {
-                  e.target.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
-                  e.target.style.transform = 'translateY(-1px)';
-                  e.target.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.3)';
-                }}
-                onMouseOut={(e) => {
-                  e.target.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
-                  e.target.style.transform = 'translateY(0)';
-                  e.target.style.boxShadow = 'none';
-                }}
-              >
-                Remover Agendamento
-              </button>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Linha 3 - Tópico e Material em uma linha */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
@@ -2151,7 +2151,7 @@ function AbaInformacoes({ topico, statusTopicos, setStatusTopicos, material, set
         </div>
       </div>
 
-      {/* Linha 3 - Comentários */}
+      {/* Linha 4 - Comentários */}
       <div>
         <label style={{
           display: 'block',
