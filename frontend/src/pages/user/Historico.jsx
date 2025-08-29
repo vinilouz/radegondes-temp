@@ -16,7 +16,7 @@ function Historico() {
   const buscarTopicosEstudados = async () => {
     try {
       setLoading(true);
-      
+
       // Buscar todos os registros de estudo
       const response = await fetch(`${API_BASE_URL}/api/registros-estudo`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -25,22 +25,22 @@ function Historico() {
       if (response.ok) {
         const data = await response.json();
         const registros = data.registros || data;
-        
+
         console.log('📚 Total de registros encontrados:', registros.length);
         console.log('📋 Primeiros 3 registros:', registros.slice(0, 3));
-        
+
         // Filtrar registros válidos que indicam estudo real
-        const registrosValidos = registros.filter(registro => 
-          registro.topico && 
-          registro.topico.trim() !== '' && 
+        const registrosValidos = registros.filter(registro =>
+          registro.topico &&
+          registro.topico.trim() !== '' &&
           registro.disciplinaId &&
           // Considerar estudado se tem qualquer uma dessas evidências:
           (registro.tempoEstudo > 0 || // Teve tempo cronometrado
-           registro.marcarComoEstudado === true || // Foi marcado explicitamente
-           registro.questoesRealizadas > 0 || // Fez questões
-           registro.material?.trim() || // Adicionou material
-           registro.observacoes?.trim() || // Fez observações
-           (registro.links && registro.links.length > 0 && registro.links.some(link => link.titulo?.trim() || link.url?.trim()))) // Adicionou links
+            registro.marcarComoEstudado === true || // Foi marcado explicitamente
+            registro.questoesRealizadas > 0 || // Fez questões
+            registro.material?.trim() || // Adicionou material
+            registro.observacoes?.trim() || // Fez observações
+            (registro.links && registro.links.length > 0 && registro.links.some(link => link.titulo?.trim() || link.url?.trim()))) // Adicionou links
         );
 
         console.log('📚 Registros válidos (estudados) encontrados:', registrosValidos.length);
@@ -61,7 +61,7 @@ function Historico() {
               const planoResponse = await fetch(`${API_BASE_URL}/api/planos/${registro.plano}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
               });
-              
+
               if (planoResponse.ok) {
                 const plano = await planoResponse.json();
                 return {
@@ -80,14 +80,14 @@ function Historico() {
 
         // Filtrar registros válidos e agrupar por tópico (manter o mais recente)
         const topicosValidos = topicosComPlano.filter(topico => topico !== null);
-        
+
         // Agrupar por tópico e manter apenas o último registro de cada um
         const topicosUnicos = {};
         topicosValidos.forEach(topico => {
           const chaveTopico = `${topico.disciplinaId}-${topico.topico}`;
-          
-          if (!topicosUnicos[chaveTopico] || 
-              new Date(topico.data || topico.createdAt) > new Date(topicosUnicos[chaveTopico].data || topicosUnicos[chaveTopico].createdAt)) {
+
+          if (!topicosUnicos[chaveTopico] ||
+            new Date(topico.data || topico.createdAt) > new Date(topicosUnicos[chaveTopico].data || topicosUnicos[chaveTopico].createdAt)) {
             topicosUnicos[chaveTopico] = topico;
           }
         });
@@ -120,7 +120,7 @@ function Historico() {
   const formatarTempo = (segundos) => {
     const horas = Math.floor(segundos / 3600);
     const minutos = Math.floor((segundos % 3600) / 60);
-    
+
     if (horas > 0) {
       return `${horas}h ${minutos}min`;
     }
@@ -212,7 +212,7 @@ function Historico() {
             Tópicos já estudados
           </p>
         </header>
-        
+
         <div className="topicos-grid">
           {[1, 2, 3, 4, 5, 6].map(i => (
             <div key={i} className="skeleton-card">
@@ -223,7 +223,7 @@ function Historico() {
                 </div>
                 <div className="skeleton-badge"></div>
               </div>
-              
+
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
                 <div className="skeleton-line skeleton-date"></div>
                 <div className="skeleton-line skeleton-plan"></div>
@@ -377,33 +377,41 @@ function Historico() {
         </div>
       ) : (
         <div className="topicos-grid">
-          {topicosEstudados.map(topico => (
-            <Link
+          {topicosEstudados.map(topico => {
+            console.log(topico, 'jkl;asdf;jkldfasjkl;asdfjkl;asdfjkl;ajkl;dsfjkl;sdfjkl;')
+            return (
+              <Link
               key={topico._id}
               to={`/planos/${topico.planoId}/disciplinas/${topico.disciplinaId}?openModal=${encodeURIComponent(topico.topico)}`}
               className="topico-card"
-            >
+              >
               <div className="topico-header">
                 <div className="topico-info">
-                  <div className="topico-nome">
-                    {topico.topico}
-                  </div>
-                  <p className="topico-disciplina">
-                    {topico.disciplinaNome}
-                  </p>
+                <div className="topico-nome">
+                  {topico.topico}
+                </div>
+                <p className="topico-disciplina">
+                  {topico.disciplinaNome}
+                </p>
                 </div>
                 <span className="topico-badge">
-                  Já estudei
+                Já estudei
                 </span>
               </div>
-
+              <div className="topico-nome">
+                Iniciada em: {topico.iniciadaEm ? formatarData(topico.iniciadaEm) : '-'}
+              </div>
+              <div className="topico-nome">
+                Finalizada em: {topico.finalizadaEm ? formatarData(topico.finalizadaEm) : '-'}
+              </div>
               <div className="topico-footer">
                 <div className="topico-plano">
-                  {topico.planoNome}
+                {topico.planoNome}
                 </div>
               </div>
-            </Link>
-          ))}
+              </Link>
+            )
+          })}
         </div>
       )}
     </>
