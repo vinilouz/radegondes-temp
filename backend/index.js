@@ -877,15 +877,14 @@ app.put('/api/planos/:planoId/disciplinas/:disciplinaId', protect, async (req, r
     console.log('Atualizando disciplina:', { planoId, disciplinaId, nome, cor, topicos });
     console.log('User ID:', req.user._id);
     
-    if (topicos && Array.isArray(topicos)) {
-      const topicosExistentes = new Set(topicos);
-      for (const topico of topicos) {
-        if (topicosSet.has(topico.toLowerCase())) {
-          return res.status(400).json({ error: 'Os tópicos não podem ser iguais.' });
-        }
-      }
-    }
-
+    // if (topicos && Array.isArray(topicos)) {
+    //   const topicosExistentes = new Set(topicos);
+    //   for (const topico of topicos) {
+    //     if (topicosSet.has(topico.toLowerCase())) {
+    //       return res.status(400).json({ error: 'Os tópicos não podem ser iguais.' });
+    //     }
+    //   }
+    // }
     const plano = await Plano.findOne({ 
       _id: planoId, 
       usuario: req.user._id 
@@ -1075,13 +1074,12 @@ app.post('/api/planos/:planoId/disciplinas', protect, async (req, res) => {
     const { nome, cor, topicos } = req.body;
     const { planoId } = req.params;
     
-    const topicosSet = new Set(topicos.map(t => t.toLowerCase()));
-    for (const topico of topicos) {
-      if (topicosSet.has(topico.toLowerCase())) {
-        return res.status(400).json({ error: 'Os tópicos não podem ser iguais.' });
-      }
-    }
-
+    // const topicosSet = new Set(topicos.map(t => t.toLowerCase()));
+    // for (const topico of topicos) {
+    //   if (topicosSet.has(topico.toLowerCase())) {
+    //     return res.status(400).json({ error: 'Os tópicos não podem ser iguais.' });
+    //   }
+    // }
     console.log('=== DADOS DA REQUISIÇÃO ===');
     console.log('PlanoId:', planoId);
     console.log('Nome da disciplina:', nome);
@@ -2153,3 +2151,4 @@ app.get('/api/admin/revisoes', protect, isAdmin, async (req, res) => {
 app.listen(port, () => {
   console.log(`Backend Radegondes rodando em http://localhost:${port}`);
 });
+
