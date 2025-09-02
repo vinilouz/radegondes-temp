@@ -1176,7 +1176,7 @@ function DisciplinaDetalhes() {
                             fontWeight: '500',
                             fontSize: '12px'
                           }}>
-                            {statusTopicos[topico]?.tipo === 'estudando' ? 'Estudando' : 'Já estudei'}
+                            {statusTopicos[topico]?.tipo === 'ja-estudei' ? 'Já estudei' : 'Estudando'}
                           </span>
                         )}
 
