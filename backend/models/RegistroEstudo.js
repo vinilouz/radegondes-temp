@@ -30,6 +30,10 @@ const RegistroEstudoSchema = new mongoose.Schema({
     trim: true,
     required: false
   },
+  indice: {
+    type: Number,
+    default: 0
+  },
   tempoEstudo: {
     type: Number, // tempo em segundos
     required: true,

@@ -1,172 +1,32 @@
 import React from "react";
-import { useEffect, useRef } from 'react';
+import { useTimer } from '../../context/TimerContext';
+import { useAuth } from '../../context/AuthContext';
 
 
-function AbaTimers({ topico, timersTopicos, setTimersTopicos, setTempoEstudoTimer, onPause, obterUltimoTempoTopico }) {
-  // Armazenar o intervalId fora do estado para evitar conflitos
-  const intervalRef = useRef(null);
+function AbaTimers({ topico, disciplina, planoId, indice, setTempoEstudoTimer, onPause }) {
+  const { getTimer, iniciarTimer, pausarTimer, formatarTempo, generateTimerKey, activeTimer, isTransitioning } = useTimer();
+  const { token } = useAuth();
 
-  console.log(topico, timersTopicos, setTimersTopicos, setTempoEstudoTimer, onPause, obterUltimoTempoTopico);
-  console.log('------------------------------------------------------------------');
+  // Obter timer data do context global
+  const timerData = getTimer(disciplina._id, planoId, topico, indice || 0);
+  const currentTimerKey = generateTimerKey(disciplina._id, planoId, topico, indice || 0);
 
-  // Função auxiliar para encontrar timer do tópico (mesma lógica do componente principal)
-  const encontrarTimerTopico = (topico) => {
-    // Primeiro, tentar a chave direta
-    if (timersTopicos[topico]) {
-      return { timer: timersTopicos[topico], chave: topico };
-    }
+  // Verificar se este timer está globalmente ativo
+  const isGloballyActive = activeTimer === currentTimerKey;
 
-    // Buscar por chaves únicas que contenham o tópico
-    const chavesRelacionadas = Object.keys(timersTopicos).filter(chave =>
-      chave.startsWith(`${topico}-`) && chave.match(new RegExp(`^${topico.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-\\d+$`))
-    );
+  // Atualizar tempoEstudoTimer sempre que o timer mudar
+  React.useEffect(() => {
+    setTempoEstudoTimer(timerData.tempo);
+  }, [timerData.tempo, setTempoEstudoTimer]);
 
-    if (chavesRelacionadas.length > 0) {
-      // Se houver múltiplas chaves, retornar a que está ativa ou a primeira
-      const chaveAtiva = chavesRelacionadas.find(chave => timersTopicos[chave]?.ativo);
-      if (chaveAtiva) {
-        return { timer: timersTopicos[chaveAtiva], chave: chaveAtiva };
-      }
-
-      // Senão, retornar a primeira encontrada
-      return { timer: timersTopicos[chavesRelacionadas[0]], chave: chavesRelacionadas[0] };
-    }
-
-    // Fallback: timer vazio
-    return { timer: { tempo: 0, ativo: false, finalizado: false }, chave: topico };
+  const handleIniciarTimer = async () => {
+    await iniciarTimer(disciplina._id, planoId, topico, indice || 0, disciplina, token);
   };
 
-  // Obter estado do timer para este tópico específico
-  const { timer: timerTopico, chave: chaveTimer } = encontrarTimerTopico(topico);
-
-  // Atualizar tempoEstudoTimer sempre que o timer do tópico mudar
-  useEffect(() => {
-    setTempoEstudoTimer(timerTopico.tempo);
-  }, [timerTopico.tempo, setTempoEstudoTimer]);
-
-  const formatarTempo = (segundos) => {
-    const horas = Math.floor(segundos / 3600);
-    const minutos = Math.floor((segundos % 3600) / 60);
-    const segundosRestantes = segundos % 60;
-    return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundosRestantes.toString().padStart(2, '0')}`;
+  const handlePausarTimer = async () => {
+    const timerKey = `${disciplina._id}_${planoId}_${topico}_${indice || 0}`;
+    await pausarTimer(timerKey, onPause);
   };
-
-  // Função para limpar interval ativo
-  const limparInterval = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-      console.log('Interval limpo para AbaTimers:', topico);
-    }
-  };
-
-  const iniciarTimer = () => {
-      console.log(topico, timersTopicos, setTimersTopicos, setTempoEstudoTimer, onPause, obterUltimoTempoTopico);
-
-    // Limpar qualquer interval ativo
-    limparInterval();
-
-    // Obter último tempo do histórico se o timer estiver zerado
-    let tempoInicial = timerTopico.tempo;
-    if (tempoInicial === 0 && obterUltimoTempoTopico) {
-      tempoInicial = obterUltimoTempoTopico(topico);
-    }
-
-    // Pausar todos os outros timers antes de iniciar este
-    setTimersTopicos(prev => {
-      const novosTimers = {};
-      // Pausar todos os timers
-      Object.keys(prev).forEach(key => {
-        novosTimers[key] = { ...prev[key], ativo: false };
-      });
-      // Ativar apenas o timer atual usando a chave correta
-      novosTimers[chaveTimer] = { ...timerTopico, tempo: tempoInicial, ativo: true };
-      return novosTimers;
-    });
-
-    // Criar novo interval
-    intervalRef.current = setInterval(() => {
-      setTimersTopicos(prev => ({
-        ...prev,
-        [chaveTimer]: {
-          ...prev[chaveTimer],
-          tempo: (prev[chaveTimer]?.tempo || 0) + 1
-        }
-      }));
-    }, 1000);
-  };
-
-  const pausarTimer = async () => {
-    console.log('Pausando timer na AbaTimers para:', topico, 'chave:', chaveTimer);
-
-    // Limpar interval primeiro
-    limparInterval();
-
-    // Pausar timer para este tópico usando a chave correta
-    setTimersTopicos(prev => {
-      const novoEstado = {
-        ...prev,
-        [chaveTimer]: { ...prev[chaveTimer], ativo: false }
-      };
-      console.log('Estado atualizado na AbaTimers:', novoEstado);
-      return novoEstado;
-    });
-
-    // Chamar função de salvamento automático se fornecida
-    if (onPause && typeof onPause === 'function') {
-      try {
-        await onPause(topico, chaveTimer);
-        console.log('Salvamento automático executado na AbaTimers para:', topico);
-      } catch (error) {
-        console.error('Erro no salvamento automático na AbaTimers:', error);
-      }
-    }
-  };
-
-  const resetarTimer = () => {
-    // Limpar interval
-    limparInterval();
-
-    // Resetar timer para este tópico usando a chave correta
-    setTimersTopicos(prev => ({
-      ...prev,
-      [chaveTimer]: { tempo: 0, ativo: false, finalizado: false }
-    }));
-  };
-
-  // Cleanup quando componente desmonta
-  useEffect(() => {
-    return () => {
-      limparInterval();
-    };
-  }, []);
-
-  // Restaurar timer ativo quando página carrega
-  useEffect(() => {
-    if (timerTopico.ativo && !intervalRef.current) {
-      console.log('Restaurando timer ativo na AbaTimers para:', topico);
-      intervalRef.current = setInterval(() => {
-        setTimersTopicos(prev => ({
-          ...prev,
-          [chaveTimer]: {
-            ...prev[chaveTimer],
-            tempo: (prev[chaveTimer]?.tempo || 0) + 1
-          }
-        }));
-      }, 1000);
-    } else if (!timerTopico.ativo && intervalRef.current) {
-      // Se o timer não está ativo mas ainda tem interval, limpar
-      limparInterval();
-    }
-  }, [timerTopico.ativo, chaveTimer, topico]);
-
-  // Parar timer se não está mais ativo
-  useEffect(() => {
-    if (!timerTopico.ativo && intervalRef.current) {
-      console.log('Parando timer inativo na AbaTimers para:', topico);
-      limparInterval();
-    }
-  }, [timerTopico.ativo, topico]);
 
   return (
     <div style={{
@@ -200,9 +60,9 @@ function AbaTimers({ topico, timersTopicos, setTimersTopicos, setTempoEstudoTime
         justifyContent: 'center',
         alignItems: 'center',
         padding: '24px',
-        backgroundColor: timerTopico.ativo ? 'rgba(245, 158, 11, 0.1)' : 'var(--darkmode-bg-tertiary)',
+        backgroundColor: isGloballyActive ? 'rgba(245, 158, 11, 0.1)' : 'var(--darkmode-bg-tertiary)',
         borderRadius: '12px',
-        border: `2px solid ${timerTopico.ativo ? 'var(--orange-primary)' : 'var(--darkmode-border-secondary)'}`,
+        border: `2px solid ${isGloballyActive ? 'var(--orange-primary)' : 'var(--darkmode-border-secondary)'}`,
       }}>
         <div style={{
           display: 'flex',
@@ -214,13 +74,13 @@ function AbaTimers({ topico, timersTopicos, setTimersTopicos, setTempoEstudoTime
           <div style={{
             fontSize: '48px',
             fontWeight: '700',
-            color: timerTopico.ativo ? 'var(--orange-primary)' : 'var(--darkmode-text-primary)',
+            color: isGloballyActive ? 'var(--orange-primary)' : 'var(--darkmode-text-primary)',
             fontFamily: 'monospace',
             textAlign: 'center',
-            textShadow: timerTopico.ativo ? '0 0 15px rgba(245, 158, 11, 0.4)' : 'none',
+            textShadow: isGloballyActive ? '0 0 15px rgba(245, 158, 11, 0.4)' : 'none',
             letterSpacing: '2px'
           }}>
-            {formatarTempo(timerTopico.tempo)}
+            {formatarTempo(timerData.tempo)}
           </div>
 
           {/* Botões de Controle */}
@@ -229,25 +89,26 @@ function AbaTimers({ topico, timersTopicos, setTimersTopicos, setTempoEstudoTime
             gap: '12px',
             justifyContent: 'center'
           }}>
-            {!timerTopico.ativo ? (
+            {!isGloballyActive ? (
               <button
-                onClick={iniciarTimer}
+                onClick={handleIniciarTimer}
+                disabled={isTransitioning}
                 style={{
                   padding: '12px 24px',
-                  backgroundColor: 'var(--darkmode-button-success)',
+                  backgroundColor: isTransitioning ? 'rgba(34, 197, 94, 0.5)' : 'var(--darkmode-button-success)',
                   color: 'var(--darkmode-bg-secondary)',
                   border: 'none',
                   borderRadius: '8px',
-                  cursor: 'pointer',
+                  cursor: isTransitioning ? 'not-allowed' : 'pointer',
                   fontSize: '14px',
                   fontWeight: '600'
                 }}
               >
-                ▶ Iniciar
+                {isTransitioning ? '⏳ Processando...' : '▶ Iniciar'}
               </button>
             ) : (
               <button
-                onClick={pausarTimer}
+                onClick={handlePausarTimer}
                 style={{
                   padding: '12px 24px',
                   backgroundColor: '#F59E0B',
@@ -284,9 +145,9 @@ function AbaTimers({ topico, timersTopicos, setTimersTopicos, setTempoEstudoTime
         <div style={{
           fontSize: '14px',
           fontWeight: '600',
-          color: timerTopico.ativo ? 'var(--orange-primary)' : 'var(--darkmode-text-primary)'
+          color: isGloballyActive ? 'var(--orange-primary)' : 'var(--darkmode-text-primary)'
         }}>
-          {timerTopico.ativo ? 'Em execução' : 'Parado'}
+          {isGloballyActive ? 'Em execução' : 'Parado'}
         </div>
       </div>
     </div>

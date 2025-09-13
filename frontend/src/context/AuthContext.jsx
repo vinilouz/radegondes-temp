@@ -13,6 +13,16 @@ export const AuthProvider = ({ children }) => {
 
   // Função para fazer logout e redirecionar
   const forceLogout = () => {
+    // Pausar todos os timers ativos antes do logout forçado
+    const activeTimers = JSON.parse(localStorage.getItem('globalTimers') || '{}');
+    Object.keys(activeTimers).forEach(timerKey => {
+      if (activeTimers[timerKey].ativo) {
+        activeTimers[timerKey].ativo = false;
+        activeTimers[timerKey].ultimaAtualizacao = Date.now();
+      }
+    });
+    localStorage.setItem('globalTimers', JSON.stringify(activeTimers));
+
     setUser(null);
     setToken(null);
     localStorage.removeItem('userToken');
@@ -212,6 +222,16 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // Pausar todos os timers ativos antes do logout
+    const activeTimers = JSON.parse(localStorage.getItem('globalTimers') || '{}');
+    Object.keys(activeTimers).forEach(timerKey => {
+      if (activeTimers[timerKey].ativo) {
+        activeTimers[timerKey].ativo = false;
+        activeTimers[timerKey].ultimaAtualizacao = Date.now();
+      }
+    });
+    localStorage.setItem('globalTimers', JSON.stringify(activeTimers));
+
     setUser(null);
     setToken(null);
     localStorage.removeItem('userToken');

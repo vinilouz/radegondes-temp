@@ -6,7 +6,9 @@ import PrivateRoute from './components/PrivateRoute';
 import PublicRoute from './components/PublicRoute';
 import AdminRoute from './components/AdminRoute';
 import MainLayout from './components/MainLayout';
+import FloatingTimer from './components/FloatingTimer/FloatingTimer';
 import { useAuth } from './context/AuthContext';
+import { TimerProvider } from './context/TimerContext';
 
 import {
   Dashboard,
@@ -37,7 +39,8 @@ function App() {
   }
 
   return (
-    <Routes>
+    <TimerProvider>
+      <Routes>
       <Route path="/" element={<PublicRoute><LoginForm /></PublicRoute>} />
       <Route path="/login" element={<PublicRoute><LoginForm /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><RegisterForm /></PublicRoute>} />
@@ -145,7 +148,9 @@ function App() {
         </AdminRoute>
       } />
 
-    </Routes>
+      </Routes>
+      <FloatingTimer />
+    </TimerProvider>
   );
 }
 

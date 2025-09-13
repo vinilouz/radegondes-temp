@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTimer } from '../../context/TimerContext';
 import { API_BASE_URL } from '../../config/api';
 import Toaster from '../../components/Toaster';
 import { useToaster } from '../../hooks/useToaster';
@@ -16,6 +17,7 @@ function DisciplinaDetalhes() {
   const navigate = useNavigate();
   const { token, authenticatedFetch, forceLogout } = useAuth();
   const { toaster, showError, hideToaster } = useToaster();
+  const { getTotalTimeForDisciplina } = useTimer();
   const [loading, setLoading] = useState(true);
   const [disciplina, setDisciplina] = useState(null);
   const [plano, setPlano] = useState(null);
@@ -26,178 +28,33 @@ function DisciplinaDetalhes() {
   const [topicoEditado, setTopicoEditado] = useState('');
   const [abaAtiva, setAbaAtiva] = useState('informacoes');
 
-  // SISTEMA DE SESSÃO DE ESTUDO
-  // Cada sessão é identificada pelo tópico e armazena todos os dados de estudo
-  const [sessaoAtiva, setSessaoAtiva] = useState(null);
-  const [sessoesEstudo, setSessoesEstudo] = useState({}); // { [topico]: { sessaoId, dados... } }
-
   // Estado para registrar status dos tópicos (data: hoje, ja-estudei, agendar)
   const [statusTopicos, setStatusTopicos] = useState({});
+
+  // Sessão de estudo ativa (simplificada para o modal)
+  const [sessaoAtiva, setSessaoAtiva] = useState(null);
 
   // Estado para checkbox "Marcar como estudado"
   const [marcarComoEstudado, setMarcarComoEstudado] = useState(false);
 
   // Estado para sincronizar dataOpcao entre componentes
   const [dataOpcaoAtual, setDataOpcaoAtual] = useState('estudando');
-  // Carregar sessões do localStorage na inicialização
-  useEffect(() => {
-    if (disciplina?._id) {
-      const chaveStorage = `sessoes_estudo_${disciplina._id}`;
-      const sessoesStorage = localStorage.getItem(chaveStorage);
-      if (sessoesStorage) {
-        try {
-          const sessoesParsed = JSON.parse(sessoesStorage);
 
-          // Converter strings de data de volta para objetos Date
-          Object.keys(sessoesParsed).forEach(topicoNome => {
-            if (sessoesParsed[topicoNome].timersFinalizados) {
-              sessoesParsed[topicoNome].timersFinalizados.forEach(registro => {
-                if (registro.horarioFinalizacao && typeof registro.horarioFinalizacao === 'string') {
-                  registro.horarioFinalizacao = new Date(registro.horarioFinalizacao);
-                }
-              });
-            }
-          });
-
-          setSessoesEstudo(sessoesParsed);
-        } catch (error) {
-          // Silently handle localStorage parsing errors
-        }
-      }
-
-      // Carregar status dos tópicos
-      const chaveStatusStorage = `status_topicos_${disciplina._id}`;
-      const statusStorage = localStorage.getItem(chaveStatusStorage);
-      if (statusStorage) {
-        try {
-          const statusParsed = JSON.parse(statusStorage);
-          setStatusTopicos(statusParsed);
-        } catch (error) {
-          // Silently handle localStorage parsing errors
-        }
-      }
-    }
-  }, [disciplina?._id]);
-
-  // Função debounced para salvar no localStorage
-  const saveToLocalStorage = useCallback((key, data) => {
-    const timeoutId = setTimeout(() => {
-      localStorage.setItem(key, JSON.stringify(data));
-    }, 500); // Debounce de 500ms
-
-    return () => clearTimeout(timeoutId);
-  }, []);
-
-  // Salvar sessões no localStorage sempre que mudarem (debounced)
-  useEffect(() => {
-    if (disciplina?._id && Object.keys(sessoesEstudo).length > 0) {
-      const chaveStorage = `sessoes_estudo_${disciplina._id}`;
-      const cleanup = saveToLocalStorage(chaveStorage, sessoesEstudo);
-      return cleanup;
-    }
-  }, [sessoesEstudo, disciplina?._id, saveToLocalStorage]);
-
-  // Salvar status dos tópicos no localStorage sempre que mudarem (debounced)
-  useEffect(() => {
-    if (disciplina?._id && Object.keys(statusTopicos).length > 0) {
-      const chaveStatusStorage = `status_topicos_${disciplina._id}`;
-      const cleanup = saveToLocalStorage(chaveStatusStorage, statusTopicos);
-      return cleanup;
-    }
-  }, [statusTopicos, disciplina?._id, saveToLocalStorage]);
-
+  
   // Estados compartilhados entre abas
   const [tempoEstudoTimer, setTempoEstudoTimer] = useState(0);
 
-  // Estado para controlar finalização forçada dos timers
-  const [forcarFinalizacao, setForcarFinalizacao] = useState(false);
-
-  // Estado do timer único (simplificado)
-  const [timer, setTimer] = useState({
-    tempo: 0,
-    ativo: false,
-    finalizado: false,
-    nome: ''
-  });
-  const [historicoTimers, setHistoricoTimers] = useState([]);
-
-  // Estado para timers individuais de cada tópico
-  const [timersTopicos, setTimersTopicos] = useState({});
+  
+  // Estado para timers individuais de cada tópico - REMOVIDO (agora usa context global)
   const topicosUnicos = useMemo(() => disciplina?.topicos || [], [disciplina?.topicos]);
 
-  // Salvar timers no localStorage sempre que mudarem
-  useEffect(() => {
-    if (disciplina?._id && planoId && Object.keys(timersTopicos).length > 0) {
-      const chaveTimersStorage = `timers_${planoId}_${disciplina._id}`;
-      localStorage.setItem(chaveTimersStorage, JSON.stringify(timersTopicos));
-    }
-  }, [timersTopicos, disciplina?._id, planoId]);
+  // Salvar timers no localStorage - REMOVIDO (agora gerenciado pelo TimerContext)
 
-  // Carregar timers do localStorage na inicialização
-  useEffect(() => {
-    if (disciplina?._id && planoId) {
-      const chaveTimersStorage = `timers_${planoId}_${disciplina._id}`;
-      const timersStorage = localStorage.getItem(chaveTimersStorage);
-
-      if (timersStorage) {
-        try {
-          const timersCarregados = JSON.parse(timersStorage);
-
-          // Inicializar timers para todos os tópicos com estrutura correta
-          const timersInicializados = {};
-
-          // Percorrer os tópicos e inicializar com dados do localStorage ou valores padrão
-          if (disciplina?.topicos) {
-            disciplina.topicos.forEach((topico, indice) => {
-              const chaveUnica = `${topico}-${indice}`;
-
-              // Buscar timer salvo no localStorage
-              if (timersCarregados[chaveUnica]) {
-                // Se encontrou a chave exata, usar os dados salvos
-                timersInicializados[chaveUnica] = {
-                  tempo: timersCarregados[chaveUnica].tempo || 0,
-                  ativo: false, // Sempre iniciar com timer pausado
-                  finalizado: timersCarregados[chaveUnica].finalizado || false
-                };
-              } else {
-                // Se não encontrou, inicializar com valores padrão
-                timersInicializados[chaveUnica] = {
-                  tempo: 0,
-                  ativo: false,
-                  finalizado: false
-                };
-              }
-            });
-          }
-
-          setTimersTopicos(timersInicializados);
-          console.log('✅ Timers carregados com sucesso do localStorage');
-        } catch (e) {
-          console.warn('❌ Erro ao carregar timers do localStorage:', e);
-        }
-      } else if (disciplina?.topicos) {
-        // Se não há dados no localStorage, inicializar com valores padrão
-        const timersInicializados = {};
-        disciplina.topicos.forEach((topico, indice) => {
-          const chaveUnica = `${topico}-${indice}`;
-          timersInicializados[chaveUnica] = {
-            tempo: 0,
-            ativo: false,
-            finalizado: false
-          };
-        });
-        setTimersTopicos(timersInicializados);
-        console.log('🆕 Timers inicializados pela primeira vez');
-      }
-    }
-  }, [disciplina?._id, planoId, disciplina?.topicos]);
-
+  
   // Estado para armazenar tempo total da disciplina
   const [tempoTotalDisciplina, setTempoTotalDisciplina] = useState(0);
 
-  // Estado para registrar último acesso aos tópicos
-  const [ultimosAcessos, setUltimosAcessos] = useState({});
-
+  
   // Estado para armazenar registros de estudo
   const [registrosEstudo, setRegistrosEstudo] = useState([]);
   const [carregandoRegistros, setCarregandoRegistros] = useState(false);
@@ -205,11 +62,7 @@ function DisciplinaDetalhes() {
   // Estado para armazenar últimos registros por tópico (para performance)
   const [ultimosRegistrosPorTopico, setUltimosRegistrosPorTopico] = useState({});
 
-  // Estados para estatísticas do plano (registros de todas as disciplinas)
-  const [registrosPlano, setRegistrosPlano] = useState([]);
-  const [ultimosRegistrosPorDisciplina, setUltimosRegistrosPorDisciplina] = useState({});
-  const [carregandoRegistrosPlano, setCarregandoRegistrosPlano] = useState(false);
-
+  
   // Estados para coleta de dados das abas
   const [links, setLinks] = useState([{ titulo: '', url: '' }]);
   const [questoesPlanejadas, setQuestoesPlanejadas] = useState(0);
@@ -217,6 +70,9 @@ function DisciplinaDetalhes() {
   const [material, setMaterial] = useState('');
   const [comentarios, setComentarios] = useState('');
   const [estudoFinalizado, setEstudoFinalizado] = useState(false);
+
+  // Estado para armazenar o índice do tópico atual no modal
+  const [indiceAtual, setIndiceAtual] = useState(0);
 
   useEffect(() => {
     fetchDisciplinaDetalhes();
@@ -256,12 +112,7 @@ function DisciplinaDetalhes() {
   }, [disciplina?._id]); // Dependência otimizada
 
   // Hook para buscar registros do plano apenas quando necessário
-  useEffect(() => {
-    if (plano && plano._id && abaAtiva === 'estatisticas' && registrosPlano.length === 0) {
-      fetchRegistrosPlano();
-    }
-  }, [plano, abaAtiva]);
-
+  
   // Hook para sincronizar automaticamente a sessão ativa com mudanças nos estados
   useEffect(() => {
     if (sessaoAtiva && !sessaoAtiva.finalizada && modalAberto && topicoSelecionado) {
@@ -289,7 +140,7 @@ function DisciplinaDetalhes() {
         [topicoSelecionado]: sessaoAtualizada
       }));
     }
-  }, [questoesPlanejadas, questoesRealizadas, material, comentarios, estudoFinalizado]);
+  }, [questoesPlanejadas, questoesRealizadas, material, comentarios, estudoFinalizado, tempoEstudoTimer]);
 
   // Hook para inicializar timers com valores do histórico quando os registros carregarem
   useEffect(() => {
@@ -305,26 +156,22 @@ function DisciplinaDetalhes() {
         };
       });
 
-      setTimersTopicos(prev => {
-        // Manter timers ativos, apenas atualizar os que estão parados
-        const novosTimers = { ...prev };
-        Object.entries(timersInicializados).forEach(([topico, dadosTimer]) => {
-          if (!prev[topico]?.ativo) {
-            novosTimers[topico] = dadosTimer;
-          }
-        });
-        return novosTimers;
-      });
+      // Removido: TimerContext gerencia os timers agora
     }
   }, [registrosEstudo, disciplina?.topicos]);
 
-  // Hook para calcular tempo total baseado nos timers dos tópicos
+  // Calcular tempo total baseado nos timers do TimerContext
+  // Calcular tempo total baseado nos timers do TimerContext
   useEffect(() => {
-    const tempoTotalTimers = Object.values(timersTopicos).reduce((total, timer) => {
-      return total + (timer.tempo || 0);
-    }, 0);
-    setTempoTotalDisciplina(tempoTotalTimers);
-  }, [timersTopicos]);
+    const fetchTotalTime = async () => {
+      if (disciplina?._id && planoId) {
+        const tempoTotal = await getTotalTimeForDisciplina(disciplina._id, planoId);
+        setTempoTotalDisciplina(tempoTotal);
+      }
+    };
+
+    fetchTotalTime();
+  }, [disciplina?._id, planoId, getTotalTimeForDisciplina]);
 
   const fetchDisciplinaDetalhes = async () => {
     try {
@@ -360,48 +207,7 @@ function DisciplinaDetalhes() {
     }
   };
 
-  const fetchRegistrosPlano = useCallback(async () => {
-    if (!plano || !plano._id || !token || carregandoRegistrosPlano) return;
-
-    setCarregandoRegistrosPlano(true);
-    try {
-      const timestamp = Date.now();
-      const response = await authenticatedFetch(`${API_BASE_URL}/api/registros-estudo?planoId=${plano._id}&limit=5000&_t=${timestamp}`);
-      if (response && response.ok) {
-        const data = await response.json();
-        setRegistrosPlano(data.registros || []);
-
-        // Processar para pegar apenas o último registro de cada disciplina
-        if (data.registros && Array.isArray(data.registros)) {
-          const ultimosPorDisciplina = {};
-
-          data.registros.forEach((registro) => {
-            const disciplinaId = registro.disciplinaId;
-            const dataRegistro = new Date(registro.data || registro.createdAt);
-
-            // Se não existe registro para esta disciplina ou este é mais recente
-            if (!ultimosPorDisciplina[disciplinaId] ||
-              dataRegistro > new Date(ultimosPorDisciplina[disciplinaId].data || ultimosPorDisciplina[disciplinaId].createdAt)) {
-              ultimosPorDisciplina[disciplinaId] = registro;
-            }
-          });
-
-          setUltimosRegistrosPorDisciplina(ultimosPorDisciplina);
-        }
-
-      } else if (response === null) {
-        // Token inválido, usuário já foi redirecionado
-        return;
-      } else {
-        console.error('Erro ao buscar registros do plano:', response.status);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar registros do plano:', error);
-    } finally {
-      setCarregandoRegistrosPlano(false);
-    }
-  }, [plano, token, authenticatedFetch]);
-
+  
   const fetchRegistrosEstudo = useCallback(async () => {
     if (!disciplina || !disciplina._id || !token || carregandoRegistros) return;
 
@@ -590,32 +396,7 @@ function DisciplinaDetalhes() {
     }
   };
 
-  // Função auxiliar para encontrar timer de um tópico (busca por nome exato ou chave única)
-  const encontrarTimerTopico = (topico) => {
-    // Primeiro, tentar a chave direta
-    if (timersTopicos[topico]) {
-      return timersTopicos[topico];
-    }
-
-    // Buscar por chaves únicas que contenham o tópico
-    const chavesRelacionadas = Object.keys(timersTopicos).filter(chave =>
-      chave.startsWith(`${topico}-`) && chave.match(new RegExp(`^${topico.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-\\d+$`))
-    );
-
-    if (chavesRelacionadas.length > 0) {
-      // Se houver múltiplas chaves, retornar a que está ativa ou a primeira
-      const chaveAtiva = chavesRelacionadas.find(chave => timersTopicos[chave]?.ativo);
-      if (chaveAtiva) {
-        return timersTopicos[chaveAtiva];
-      }
-
-      // Senão, retornar a primeira encontrada
-      return timersTopicos[chavesRelacionadas[0]];
-    }
-
-    // Fallback: timer vazio
-    return { tempo: 0, ativo: false, finalizado: false };
-  };
+  // Função auxiliar - REMOVIDA (TimerContext gerencia isso agora)
 
   const abrirModalEstudo = (topico, abaInicial = 'informacoes', indice = null) => {
     console.log(`=== ABRINDO MODAL - ${topico} ===`);
@@ -624,6 +405,7 @@ function DisciplinaDetalhes() {
     setTopicoSelecionado(topico);
     setTopicoEditado(topico);
     setAbaAtiva(abaInicial);
+    setIndiceAtual(indice || 0);
 
     // Inicializar dataOpcao baseado no status do tópico
     const statusDoTopico = statusTopicos[topico];
@@ -637,8 +419,9 @@ function DisciplinaDetalhes() {
     const jaFoiEstudado = statusTopicos[topico]?.jaEstudado || false;
     setMarcarComoEstudado(jaFoiEstudado);
 
-    // Sincronizar timer - usar função auxiliar para encontrar timer correto
-    const timerAtual = encontrarTimerTopico(topico);
+    // Sincronizar timer - buscar timer do TimerContext
+    const { getTimer } = useTimer();
+    const timerAtual = getTimer(disciplina._id, planoId, topico, 0);
     if (timerAtual && timerAtual.tempo > 0) {
       setTempoEstudoTimer(timerAtual.tempo);
     }
@@ -761,48 +544,11 @@ function DisciplinaDetalhes() {
         return;
       }
 
-      // Usar chaveUnica se fornecida, senão usar topico como fallback para compatibilidade
-      const chaveTimer = chaveUnica || topico;
+      console.log('Salvamento automático: Timer pausado automaticamente para tópico:', topico);
 
-      // Obter dados atuais do timer
-      const timerAtual = timersTopicos[chaveTimer];
-      if (!timerAtual || timerAtual.tempo === 0) {
-        return; // Não salvar se não há tempo registrado
-      }
-
-      // Criar dados básicos para salvamento automático
-      const dadosCompletos = {
-        sessaoId: gerarSessaoIdUnica('auto', topico),
-        disciplinaId: disciplina._id,
-        disciplinaNome: disciplina.nome,
-        planoId: planoId,
-        topico: topico,
-        tempoEstudo: timerAtual.tempo,
-        observacoes: '',
-        material: '',
-        links: [],
-        questoesPlanejadas: 0,
-        questoesRealizadas: 0,
-        estudoFinalizado: false,
-        dataOpcao: 'hoje',
-        dataAgendada: '',
-        tipoAtividade: 'estudo',
-        iniciadaEm: new Date(),
-        finalizadaEm: new Date()
-      };
-
-      const response = await authenticatedFetch(`${API_BASE_URL}/api/registro-estudo`, {
-        method: 'POST',
-        body: JSON.stringify(dadosCompletos),
-      });
-
-      if (response && response.ok) {
-        // Recarregar registros silenciosamente
-        await fetchRegistrosEstudo();
-      } else if (response === null) {
-        // Token inválido, usuário já foi redirecionado
-        return;
-      }
+      // TimerContext já gerencia o salvamento automático dos timers
+      // Esta função mantém compatibilidade com o componente TimerTopico
+      return;
 
     } catch (error) {
       // Falha silenciosa para não interromper UX
@@ -851,12 +597,7 @@ function DisciplinaDetalhes() {
         topicosTotal: novosTopicos.length
       }));
 
-      // Remover timer do tópico se existir
-      setTimersTopicos(prev => {
-        const novosTimers = { ...prev };
-        delete novosTimers[topicoNome];
-        return novosTimers;
-      });
+      // Timer removido automaticamente quando tópico é removido - TimerContext gerencia
 
       alert(`Tópico "${topicoNome}" removido com sucesso!`);
 
@@ -1234,13 +975,9 @@ function DisciplinaDetalhes() {
                         key={key}
                         indice={key}
                         topico={topico}
-                        timersTopicos={timersTopicos}
-                        setTimersTopicos={setTimersTopicos}
-                        onPause={salvarAutomatico}
-                        obterUltimoTempoTopico={obterUltimoTempoTopico}
-                        token={token}
                         disciplina={disciplina}
                         planoId={planoId}
+                        onPause={salvarAutomatico}
                       />
                     </div>
 
@@ -1540,11 +1277,11 @@ function DisciplinaDetalhes() {
               />}
               {abaAtiva === 'timers' && <AbaTimers
                 topico={topicoSelecionado}
-                timersTopicos={timersTopicos}
-                setTimersTopicos={setTimersTopicos}
+                disciplina={disciplina}
+                planoId={planoId}
+                indice={indiceAtual}
                 setTempoEstudoTimer={setTempoEstudoTimer}
                 onPause={salvarAutomatico}
-                obterUltimoTempoTopico={obterUltimoTempoTopico}
               />}
               {abaAtiva === 'links' && <AbaLinks
                 links={links}

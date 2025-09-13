@@ -13,6 +13,7 @@ const Instituicao = require('./models/Instituicao');
 const Plano = require('./models/Plano');
 const RegistroEstudo = require('./models/RegistroEstudo');
 const Revisao = require('./models/Revisao');
+const TimerAtivo = require('./models/TimerAtivo');
 const jwt = require('jsonwebtoken');
 const { protect, isAdmin } = require('./middleware/authMiddleware');
 const seedDatabase = require('./config/seedDatabase');
@@ -1861,7 +1862,7 @@ app.get('/api/registros-estudo', protect, async (req, res) => {
     if (disciplinaId) {
       filter.disciplinaId = disciplinaId;
     } else if (planoId) {
-      filter.planoId = planoId;
+      filter.plano = planoId;
     }
     
     console.log('• Filtro aplicado:', filter);
@@ -2145,6 +2146,195 @@ app.get('/api/admin/revisoes', protect, isAdmin, async (req, res) => {
   } catch (error) {
     console.error('Erro ao buscar revisões:', error);
     res.status(500).json({ message: 'Erro no servidor ao buscar revisões.' });
+  }
+});
+
+// === ROTAS PARA TIMERS ATIVOS ===
+
+// Buscar todos os timers ativos do usuário
+app.get('/api/timers-ativos', protect, async (req, res) => {
+  try {
+    const timers = await TimerAtivo.find({ usuario: req.user.id });
+    res.json({ success: true, timers });
+  } catch (error) {
+    console.error('Erro ao buscar timers ativos:', error);
+    res.status(500).json({ success: false, message: 'Erro ao buscar timers ativos' });
+  }
+});
+
+// Buscar timer específico
+app.get('/api/timers-ativos/:planoId/:disciplinaId/:topico/:indice?', protect, async (req, res) => {
+  try {
+    const { planoId, disciplinaId, topico } = req.params;
+    const indice = parseInt(req.params.indice) || 0;
+
+    const timer = await TimerAtivo.findOne({
+      usuario: req.user.id,
+      plano: planoId,
+      disciplinaId: disciplinaId,
+      topico: topico,
+      indice: indice
+    });
+
+    res.json({ success: true, timer });
+  } catch (error) {
+    console.error('Erro ao buscar timer:', error);
+    res.status(500).json({ success: false, message: 'Erro ao buscar timer' });
+  }
+});
+
+// Criar ou atualizar timer
+app.post('/api/timers-ativos', protect, async (req, res) => {
+  try {
+    const {
+      planoId,
+      disciplinaId,
+      topico,
+      indice = 0,
+      tempo = 0,
+      ativo = false,
+      disciplinaNome = '',
+      sessaoId = null
+    } = req.body;
+
+    // Buscar timer existente
+    let timer = await TimerAtivo.findOne({
+      usuario: req.user.id,
+      plano: planoId,
+      disciplinaId: disciplinaId,
+      topico: topico,
+      indice: indice
+    });
+
+    if (timer) {
+      // Atualizar timer existente
+      timer.tempo = tempo;
+      timer.ativo = ativo;
+      timer.disciplinaNome = disciplinaNome || timer.disciplinaNome;
+      timer.sessaoId = sessaoId || timer.sessaoId;
+      timer.ultimoSalvamento = new Date();
+      timer.dataUltimaAtualizacao = new Date();
+      await timer.save();
+    } else {
+      // Criar novo timer
+      timer = new TimerAtivo({
+        usuario: req.user.id,
+        plano: planoId,
+        disciplinaId: disciplinaId,
+        topico: topico,
+        indice: indice,
+        tempo: tempo,
+        ativo: ativo,
+        disciplinaNome: disciplinaNome,
+        sessaoId: sessaoId,
+        dataInicio: new Date(),
+        ultimoSalvamento: new Date(),
+        dataUltimaAtualizacao: new Date()
+      });
+      await timer.save();
+    }
+
+    res.json({ success: true, timer });
+  } catch (error) {
+    console.error('Erro ao salvar timer:', error);
+    res.status(500).json({ success: false, message: 'Erro ao salvar timer' });
+  }
+});
+
+// Atualizar tempo de timer específico
+app.put('/api/timers-ativos/:planoId/:disciplinaId/:topico/:indice', protect, async (req, res) => {
+  try {
+    const { planoId, disciplinaId, topico, indice } = req.params;
+    const { tempo, ativo } = req.body;
+
+    const timer = await TimerAtivo.findOne({
+      usuario: req.user.id,
+      plano: planoId,
+      disciplinaId: disciplinaId,
+      topico: topico,
+      indice: parseInt(indice)
+    });
+
+    if (!timer) {
+      return res.status(404).json({ success: false, message: 'Timer não encontrado' });
+    }
+
+    if (tempo !== undefined) timer.tempo = tempo;
+    if (ativo !== undefined) timer.ativo = ativo;
+    timer.ultimoSalvamento = new Date();
+    timer.dataUltimaAtualizacao = new Date();
+
+    await timer.save();
+    res.json({ success: true, timer });
+  } catch (error) {
+    console.error('Erro ao atualizar timer:', error);
+    res.status(500).json({ success: false, message: 'Erro ao atualizar timer' });
+  }
+});
+
+// Pausar todos os timers ativos do usuário
+app.put('/api/timers-ativos/pausar-todos', protect, async (req, res) => {
+  try {
+    const result = await TimerAtivo.updateMany(
+      { usuario: req.user.id, ativo: true },
+      {
+        ativo: false,
+        dataUltimaAtualizacao: new Date()
+      }
+    );
+
+    res.json({
+      success: true,
+      message: `${result.modifiedCount} timers pausados`,
+      modifiedCount: result.modifiedCount
+    });
+  } catch (error) {
+    console.error('Erro ao pausar timers:', error);
+    res.status(500).json({ success: false, message: 'Erro ao pausar timers' });
+  }
+});
+
+// Excluir timer específico
+app.delete('/api/timers-ativos/:planoId/:disciplinaId/:topico/:indice', protect, async (req, res) => {
+  try {
+    const { planoId, disciplinaId, topico, indice } = req.params;
+
+    const result = await TimerAtivo.deleteOne({
+      usuario: req.user.id,
+      plano: planoId,
+      disciplinaId: disciplinaId,
+      topico: topico,
+      indice: parseInt(indice)
+    });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Timer não encontrado' });
+    }
+
+    res.json({ success: true, message: 'Timer excluído com sucesso' });
+  } catch (error) {
+    console.error('Erro ao excluir timer:', error);
+    res.status(500).json({ success: false, message: 'Erro ao excluir timer' });
+  }
+});
+
+// Buscar tempo total por disciplina
+app.get('/api/timers-ativos/total-tempo/:planoId/:disciplinaId', protect, async (req, res) => {
+  try {
+    const { planoId, disciplinaId } = req.params;
+
+    const timers = await TimerAtivo.find({
+      usuario: req.user.id,
+      plano: planoId,
+      disciplinaId: disciplinaId
+    });
+
+    const tempoTotal = timers.reduce((total, timer) => total + timer.tempo, 0);
+
+    res.json({ success: true, tempoTotal });
+  } catch (error) {
+    console.error('Erro ao calcular tempo total:', error);
+    res.status(500).json({ success: false, message: 'Erro ao calcular tempo total' });
   }
 });
 
