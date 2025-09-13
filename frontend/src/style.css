@@ -1354,16 +1354,18 @@ button:hover {
   color: var(--darkmode-button-primary); 
   position: relative; 
 }
-.sidebar nav ul li a.active::before { 
-  content: ''; 
-  position: absolute; 
-  top: 0px; 
-  left: 50%; 
-  transform: translateX(-50%); 
-  width: 5px; 
-  height: 5px; 
-  background-color: var(--darkmode-button-primary); 
-  border-radius: 100%; 
+@media (min-width: 1024px) {
+  .sidebar nav ul li a.active::before { 
+    content: ''; 
+    position: absolute; 
+    top: 0px; 
+    left: 50%; 
+    transform: translateX(-50%); 
+    width: 5px; 
+    height: 5px; 
+    background-color: var(--darkmode-button-primary); 
+    border-radius: 100%; 
+  }
 }
 .sidebar .user { 
   position: relative; 
@@ -1440,7 +1442,7 @@ button:hover {
   width: 100%; 
   height: auto; 
   padding: 0px 40px 100px 40px; 
-  margin-top: 140px; 
+  margin-top: 40px; 
   background-color: var(--darkmode-bg-primary);
 }
 
@@ -3702,4 +3704,8 @@ textarea:focus {
 .perfil-modal .password-toggle-btn svg {
   opacity: 1 !important;
   visibility: visible !important;
+}
+
+.status-badge {
+  display: none !important;
 }

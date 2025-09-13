@@ -919,12 +919,17 @@ function DisciplinaDetalhes() {
           }
         `}
       </style>
-      <div className="page-header" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
+      <div className="page-header responsive-header" style={{
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '16px'
+      }}>
+        <div style={{ flex: '1', minWidth: '200px' }}>
           <div className="page-subtitle">
             {plano?.nome}
           </div>
-          <h1 className="page-title">
+          <h1 className="page-title" style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)' }}>
             {disciplina.nome}
           </h1>
         </div>
@@ -937,14 +942,15 @@ function DisciplinaDetalhes() {
             // Navegar para a lista de planos
             navigate(`/planos/${planoId}`);
           }}
-          className="back-to-list-button"
+          className="back-to-list-button responsive-button"
           style={{
             padding: '10px 16px',
             fontSize: '14px',
             fontWeight: '500',
             borderRadius: '8px',
             cursor: 'pointer',
-            whiteSpace: 'nowrap'
+            whiteSpace: 'nowrap',
+            flexShrink: 0
           }}
         >
           Voltar à lista de disciplinas
@@ -953,7 +959,12 @@ function DisciplinaDetalhes() {
 
       {/* Conteúdo da disciplina */}
       <div className="main-card">
-        <div className="stats-grid">
+        <div className="stats-grid responsive-stats-grid" style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '16px',
+          marginBottom: '40px'
+        }}>
           <div className="stat-card" style={{ opacity: '0.7' }}>
             <div className="stat-label" style={{
               display: 'flex',
@@ -1070,7 +1081,7 @@ function DisciplinaDetalhes() {
 
         {/* Lista de Tópicos */}
         <div style={{
-          marginBottom: '30px'
+          marginBottom: '40px'
         }}>
           <h3 style={{
             fontSize: '20px',
@@ -1089,8 +1100,8 @@ function DisciplinaDetalhes() {
               flexDirection: 'column',
               gap: '12px'
             }}>
-              {/* Header da lista */}
-              <div style={{
+              {/* Header da lista - Desktop */}
+              <div className="topics-header desktop-only" style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 120px 180px 150px 150px',
                 gap: '20px',
@@ -1114,6 +1125,7 @@ function DisciplinaDetalhes() {
                 return (
                   <div
                     key={key}
+                    className="topic-item"
                     style={{
                       display: 'grid',
                       gridTemplateColumns: '1fr 120px 180px 180px 150px',
@@ -1152,7 +1164,9 @@ function DisciplinaDetalhes() {
                         padding: '4px 8px',
                         borderRadius: '6px',
                         transition: 'all 0.2s ease',
-                        gap: '8px'
+                        gap: '8px',
+                        justifyContent: 'center',
+                        textAlign: 'center'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.backgroundColor = 'var(--darkmode-bg-tertiary)';
@@ -1164,17 +1178,17 @@ function DisciplinaDetalhes() {
                       }}
                       title="Clique para abrir modal de estudo"
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, justifyContent: 'center' }}>
                         <span>{topico}</span>
                         {(statusTopicos[topico]?.tipo || statusTopicos[topico]?.jaEstudado) && (
-                          <span style={{
+                          <span className='status-badge' style={{
                             padding: '2px 6px',
                             backgroundColor: 'rgba(34, 197, 94, 0.1)',
                             border: '1px solid rgba(34, 197, 94, 0.3)',
                             borderRadius: '4px',
                             color: 'var(--green-primary, #22c55e)',
                             fontWeight: '500',
-                            fontSize: '12px'
+                            fontSize: '12px',
                           }}>
                             {statusTopicos[topico]?.tipo === 'ja-estudei' ? 'Já estudei' : 'Estudando'}
                           </span>
@@ -1419,15 +1433,16 @@ function DisciplinaDetalhes() {
           justifyContent: 'center',
           zIndex: 1000
         }}>
-          <div style={{
+          <div className="modal-content" style={{
             backgroundColor: 'var(--darkmode-bg-secondary)',
             borderRadius: '12px',
-            padding: '30px',
+            padding: 'clamp(16px, 4vw, 30px)',
             maxWidth: '800px',
-            width: '90%',
-            maxHeight: '80vh',
+            width: '95%',
+            maxHeight: '90vh',
             overflow: 'auto',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)'
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)',
+            margin: '16px'
           }}>
             {/* Cabeçalho do Modal */}
             <div style={{
@@ -1467,10 +1482,12 @@ function DisciplinaDetalhes() {
             </div>
 
             {/* Abas do Modal */}
-            <div style={{
+            <div className="modal-tabs" style={{
               display: 'flex',
               borderBottom: '1px solid var(--darkmode-border-secondary)',
-              marginBottom: '25px'
+              marginBottom: '25px',
+              flexWrap: 'wrap',
+              gap: '4px'
             }}>
               {[
                 { id: 'informacoes', label: 'Informações' },
@@ -1482,14 +1499,16 @@ function DisciplinaDetalhes() {
                   key={aba.id}
                   onClick={() => setAbaAtiva(aba.id)}
                   style={{
-                    padding: '12px 20px',
+                    padding: 'clamp(8px, 2vw, 12px) clamp(12px, 3vw, 20px)',
                     backgroundColor: abaAtiva === aba.id ? 'var(--darkmode-bg-tertiary)' : 'transparent',
                     border: 'none',
                     color: abaAtiva === aba.id ? 'var(--orange-primary)' : 'var(--darkmode-text-secondary)',
                     fontWeight: abaAtiva === aba.id ? '600' : '500',
                     cursor: 'pointer',
-                    fontSize: '14px',
-                    borderRadius: '6px'
+                    fontSize: 'clamp(12px, 2.5vw, 14px)',
+                    borderRadius: '6px',
+                    flex: '1',
+                    minWidth: 'fit-content'
                   }}
                 >
                   {aba.label}
@@ -1762,6 +1781,75 @@ function DisciplinaDetalhes() {
             100% {
               background-color: var(--orange);
               transform: scale(1.05);
+            }
+          }
+
+          /* Responsive Styles */
+          @media (max-width: 768px) {
+            .responsive-header {
+              flex-direction: column;
+              align-items: flex-start !important;
+              gap: 12px !important;
+            }
+
+            .responsive-button {
+              align-self: stretch;
+              text-align: center;
+            }
+
+            .desktop-only {
+              display: none !important;
+            }
+
+            .topic-item {
+              display: flex !important;
+              flex-direction: column !important;
+              gap: 12px !important;
+              align-items: stretch !important;
+            }
+
+            .topic-item > div {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              flex-wrap: wrap;
+              gap: 8px;
+            }
+
+            .topic-item > div:first-child {
+              justify-content: flex-start !important;
+              font-weight: 600;
+              font-size: 16px;
+            }
+
+            .modal-content {
+              margin: 8px !important;
+              width: calc(100% - 16px) !important;
+              max-height: calc(100vh - 16px) !important;
+            }
+
+            .modal-tabs {
+              overflow-x: auto;
+              scrollbar-width: none;
+              -ms-overflow-style: none;
+            }
+
+            .modal-tabs::-webkit-scrollbar {
+              display: none;
+            }
+
+            .form-row {
+              grid-template-columns: 1fr !important;
+            }
+          }
+
+          @media (max-width: 480px) {
+            .responsive-stats-grid {
+              grid-template-columns: 1fr !important;
+            }
+
+            .topic-item {
+              padding: 12px !important;
             }
           }
         `}
@@ -2093,7 +2181,11 @@ function AbaInformacoes({ topico, statusTopicos, setStatusTopicos, material, set
 
 
       {/* Linha 3 - Tópico e Material em uma linha */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+      <div className="form-row" style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+        gap: '15px'
+      }}>
         {/* Tópico */}
         <div>
           <label style={{
