@@ -1,32 +1,32 @@
 import { API_BASE_URL } from '../config/api';
 
 export async function loginUser({ email, password }) {
-  const response = await fetch(`${API_BASE_URL}/api/login`, {
+  const response = await fetch(`${API_BASE_URL}/api/users/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.message || 'Erro no login.');
+    throw new Error(data.message || 'Login failed.');
   }
   return data;
 }
 export async function registerUser(userData) {
-  const response = await fetch(`${API_BASE_URL}/api/register`, {
+  const response = await fetch(`${API_BASE_URL}/api/users/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(userData),
   });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.message || 'Erro no cadastro.');
+    throw new Error(data.message || 'Registration failed.');
   }
   return data;
 }
 export async function getApiData(token, endpoint = '/api/dashboard-data') {
   if (!token) {
-    throw new Error('Nenhum token encontrado. Faça login novamente.');
+    throw new Error('No token found. Please log in again.');
   }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -40,7 +40,7 @@ export async function getApiData(token, endpoint = '/api/dashboard-data') {
   const data = await response.json();
 
   if (!response.ok) {
-    const error = new Error(data.message || 'Erro ao buscar dados da API.');
+    const error = new Error(data.message || 'Error fetching API data.');
     error.status = response.status;
     throw error;
   }
@@ -48,35 +48,25 @@ export async function getApiData(token, endpoint = '/api/dashboard-data') {
   return data;
 }
 
-// Registros de Estudo
-export async function salvarRegistroEstudo(token, dadosRegistro) {
+// Study Logs
+export async function saveStudyLog(token, logData) {
   if (!token) {
-    throw new Error('Nenhum token encontrado. Faça login novamente.');
+    throw new Error('No token found. Please log in again.');
   }
 
-  console.log('=== DEBUG SALVAMENTO ===');
-  console.log('URL completa:', `${API_BASE_URL}/api/registro-estudo`);
-  console.log('Token:', token ? 'Presente' : 'Ausente');
-  console.log('Dados enviados:', dadosRegistro);
-
-  const response = await fetch(`${API_BASE_URL}/api/registro-estudo`, {
+  const response = await fetch(`${API_BASE_URL}/api/study-logs`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify(dadosRegistro),
+    body: JSON.stringify(logData),
   });
 
-  console.log('Status da resposta:', response.status);
-  console.log('Headers da resposta:', response.headers);
-
   const data = await response.json();
-  console.log('Dados da resposta:', data);
 
   if (!response.ok) {
-    console.error('Erro na resposta:', data);
-    const error = new Error(data.message || 'Erro ao salvar registro de estudo.');
+    const error = new Error(data.message || 'Error saving study log.');
     error.status = response.status;
     throw error;
   }
@@ -84,13 +74,13 @@ export async function salvarRegistroEstudo(token, dadosRegistro) {
   return data;
 }
 
-export async function buscarRegistrosEstudo(token, filtros = {}) {
+export async function fetchStudyLogs(token, filters = {}) {
   if (!token) {
-    throw new Error('Nenhum token encontrado. Faça login novamente.');
+    throw new Error('No token found. Please log in again.');
   }
 
-  const params = new URLSearchParams(filtros);
-  const response = await fetch(`${API_BASE_URL}/api/registros-estudo?${params}`, {
+  const params = new URLSearchParams(filters);
+  const response = await fetch(`${API_BASE_URL}/api/study-logs?${params}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -101,7 +91,7 @@ export async function buscarRegistrosEstudo(token, filtros = {}) {
   const data = await response.json();
 
   if (!response.ok) {
-    const error = new Error(data.message || 'Erro ao buscar registros de estudo.');
+    const error = new Error(data.message || 'Error fetching study logs.');
     error.status = response.status;
     throw error;
   }
@@ -109,12 +99,12 @@ export async function buscarRegistrosEstudo(token, filtros = {}) {
   return data;
 }
 
-export async function buscarEstatisticasDisciplina(token, disciplinaId) {
+export async function fetchSubjectStats(token, subjectId) {
   if (!token) {
-    throw new Error('Nenhum token encontrado. Faça login novamente.');
+    throw new Error('No token found. Please log in again.');
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/disciplina/${disciplinaId}/estatisticas`, {
+  const response = await fetch(`${API_BASE_URL}/api/subjects/${subjectId}/stats`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -125,7 +115,7 @@ export async function buscarEstatisticasDisciplina(token, disciplinaId) {
   const data = await response.json();
 
   if (!response.ok) {
-    const error = new Error(data.message || 'Erro ao buscar estatísticas da disciplina.');
+    const error = new Error(data.message || 'Error fetching subject statistics.');
     error.status = response.status;
     throw error;
   }

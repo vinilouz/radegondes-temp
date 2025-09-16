@@ -2,31 +2,31 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const UserSchema = new mongoose.Schema({
-  nome: {
+  firstName: {
     type: String,
     required: true,
     trim: true,
   },
-  sobrenome: {
+  lastName: {
     type: String,
     required: false,
     trim: true,
   },
-  dataAniversario: {
+  birthDate: {
     type: Date,
     required: false,
   },
-  genero: {
+  gender: {
     type: String,
     required: false,
-    enum: ['masculino', 'feminino', 'outro'],
+    enum: ['male', 'female', 'other'],
   },
-  cidade: {
+  city: {
     type: String,
     required: false,
     trim: true,
   },
-  estado: {
+  state: {
     type: String,
     required: false,
     enum: [
@@ -56,21 +56,21 @@ const UserSchema = new mongoose.Schema({
     required: false,
     default: null,
   },
-  // Campos de preferências
-  diasEstudo: {
+  // Preference fields
+  studyDays: {
     type: [String],
     default: []
   },
-  periodosDisponiveis: {
+  availablePeriods: {
     type: [String],
     default: ['1', '7', '30', '60', '120']
   },
-  primeiroDiaSemana: {
+  firstDayOfWeek: {
     type: String,
-    enum: ['domingo', 'segunda'],
-    default: 'domingo'
+    enum: ['sunday', 'monday'],
+    default: 'sunday'
   },
-  audioAlerta: {
+  alertSound: {
     type: String,
     default: 'alerta1.wav'
   },
@@ -83,7 +83,7 @@ const UserSchema = new mongoose.Schema({
     default: null,
   }
 }, {
-  timestamps: true // Adiciona createdAt e updatedAt automaticamente
+  timestamps: true // Adds createdAt and updatedAt automatically
 });
 
 UserSchema.pre('save', async function(next) {

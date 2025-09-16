@@ -23,15 +23,14 @@ function PlanoDetalhes() {
   const navigate = useNavigate();
   const location = useLocation();
   const { token } = useAuth();
-  const [plano, setPlano] = useState({
-    nome: '',
-    descricao: '',
-    editais: [],
-    disciplinas: 0,
-    topicos: 0,
-    horasEstudo: 0,
-    questoesTotal: 0,
-    disciplinasDetalhadas: []
+  const [plan, setPlan] = useState({
+    name: '',
+    description: '',
+    subjects: [],
+    subjectCount: 0,
+    topicCount: 0,
+    totalStudyTime: 0,
+    totalQuestions: 0,
   });
   const [tempoDeEstudos, setTempoDeEstudos] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -63,8 +62,8 @@ function PlanoDetalhes() {
   const [jaVerificouModal, setJaVerificouModal] = useState(false);
 
   useEffect(() => {
-    document.title = 'Detalhes do Estudo - Radegondes';
-    fetchPlano();
+    document.title = 'Study Details - Radegondes';
+    fetchPlan();
     fetchStatusDisciplinas();
     fetchTopicosAgendados();
 
@@ -83,7 +82,7 @@ function PlanoDetalhes() {
     const shouldEdit = searchParams.get('edit') === 'true';
 
     if (shouldEdit && !jaVerificouModal) {
-      console.log('🎯 Parâmetro edit=true detectado, configurando para abrir modal...');
+      console.log('🎯 Edit parameter detected, setting up modal...');
 
       // Limpar URL imediatamente
       const newUrl = window.location.pathname;
@@ -93,41 +92,41 @@ function PlanoDetalhes() {
     }
   }, [id]); // Mudança: depender apenas do id, não do location.search
 
-  // Effect separado para abrir o modal quando o plano estiver carregado
+  // Effect separado para abrir o modal quando o plan estiver carregado
   useEffect(() => {
-    if (deveAbrirModalAutomatico && plano && plano.nome && !loading && !showEditModal) {
-      console.log('🎯 Verificando se deve abrir modal para plano carregado...');
+    if (deveAbrirModalAutomatico && plan && plan.name && !loading && !showEditModal) {
+      console.log('🎯 Checking if modal should open for loaded plan...');
 
-      const isPersonalizado = isPlanoPersonalizado(plano);
-      const semDisciplinas = !plano.disciplinasDetalhadas || plano.disciplinasDetalhadas.length === 0;
+      const isPersonalizado = isPlanoPersonalizado(plan);
+      const semDisciplinas = !plan.subjects || plan.subjects.length === 0;
 
-      console.log('🔍 Verificações finais:', {
+      console.log('🔍 Final checks:', {
         isPersonalizado,
         semDisciplinas,
-        editais: plano.editais,
+        subjects: plan.subjects,
         shouldOpenModal: isPersonalizado && semDisciplinas
       });
 
       if (isPersonalizado && semDisciplinas) {
-        console.log('✅ ABRINDO MODAL AUTOMATICAMENTE!');
+        console.log('✅ OPENING MODAL AUTOMATICALLY!');
 
         const timer = setTimeout(() => {
-          console.log('⏰ Timer executado, abrindo modal...');
+          console.log('⏰ Timer executed, opening modal...');
           setShowEditModal(true);
           setIsClosing(false);
           setDeveAbrirModalAutomatico(false); // Reset flag
         }, 300);
 
         return () => {
-          console.log('🧹 Limpando timer...');
+          console.log('🧹 Clearing timer...');
           clearTimeout(timer);
         };
       } else {
-        console.log('❌ Não vai abrir modal automaticamente');
+        console.log('❌ Not opening modal automatically');
         setDeveAbrirModalAutomatico(false); // Reset flag mesmo se não abrir
       }
     }
-  }, [deveAbrirModalAutomatico, plano, loading, showEditModal]);
+  }, [deveAbrirModalAutomatico, plan, loading, showEditModal]);
 
   // Função para verificar se um tópico está agendado
   const verificarTopicoAgendado = (disciplinaId, nomeTopico) => {
@@ -198,10 +197,10 @@ function PlanoDetalhes() {
     }
   };
 
-  const fetchPlano = async () => {
+  const fetchPlan = async () => {
     try {
       const timestamp = new Date().getTime();
-      const response = await fetch(`${API_BASE_URL}/api/planos/${id}?_t=${timestamp}`, {
+      const response = await fetch(`${API_BASE_URL}/api/study-plans/${id}?_t=${timestamp}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Cache-Control': 'no-cache',
@@ -211,14 +210,14 @@ function PlanoDetalhes() {
 
       if (response.ok) {
         const data = await response.json();
-        setPlano(data);
+        setPlan(data);
         setFormData({
-          nome: data.nome,
-          descricao: data.descricao || 'Sem informações extras'
+          name: data.name,
+          description: data.description || 'No description'
         });
-        document.title = `${data.nome} - Radegondes`;
+        document.title = `${data.name} - Radegondes`;
       } else if (response.status === 404) {
-        navigate('/planos');
+        navigate('/study-plans');
       } else {
         const errorText = await response.text();
       }
@@ -228,35 +227,15 @@ function PlanoDetalhes() {
     }
   };
 
-  const verificarDisciplinaEstudando = (disciplina) => {
-    return statusDisciplinas[disciplina._id] || false;
+  const isDisciplineBeingStudied = (subject) => {
+    return statusDisciplinas[subject._id] || false;
   };
 
-  const isPlanoPersonalizado = (plano) => {
-    console.log('🔍 Verificando se é plano personalizado:', {
-      editais: plano?.editais,
-      editaisLength: plano?.editais?.length,
-      isArray: Array.isArray(plano?.editais)
-    });
-
-    if (!plano?.editais || !Array.isArray(plano.editais) || plano.editais.length === 0) {
-      console.log('✅ É personalizado: sem editais ou array vazio');
-      return true;
-    }
-
-    const resultado = plano.editais.some(edital => {
-      if (!edital || typeof edital !== 'object' || !edital.nome) {
-        console.log('✅ É personalizado: edital inválido');
-        return true;
-      }
-      const nomeEdital = edital.nome.toLowerCase().trim();
-      const isPersonalizado = nomeEdital === 'editalpersonalizado' || nomeEdital === 'personalizado';
-      console.log('🔍 Verificando edital:', { nome: edital.nome, nomeEdital, isPersonalizado });
-      return isPersonalizado;
-    });
-
-    console.log('🎯 Resultado final isPlanoPersonalizado:', resultado);
-    return resultado;
+  const isCustomPlan = (plan) => {
+    // A custom plan is now defined as one that has no subjects associated with it initially.
+    // The old logic was based on a special 'Edital' name.
+    // This is a simplification and may need adjustment based on the new backend logic.
+    return !plan?.subjects || plan.subjects.length === 0;
   };
 
   const openEditModal = () => {
@@ -284,89 +263,73 @@ function PlanoDetalhes() {
     }, 300);
   };
 
-  const handleVisualizarDisciplina = (disciplina) => {
-    navigate(`/planos/${id}/disciplinas/${disciplina._id}`);
+  const handleViewSubject = (subject) => {
+    navigate(`/study-plans/${id}/subjects/${subject._id}`);
   };
 
-  const handleEditarDisciplina = (disciplina) => {
-    setDisciplinaSelecionada(disciplina);
-    setFormDataDisciplina({
-      nome: disciplina.nome,
-      cor: disciplina.cor,
-      topicos: disciplina.topicos || []
+  const handleEditSubject = (subject) => {
+    setSelectedSubject(subject);
+    setSubjectFormData({
+      name: subject.name,
+      color: subject.color,
+      topics: subject.topics || []
     });
     setShowEditDisciplinaModal(true);
   };
 
   const closeEditDisciplinaModal = () => {
     setShowEditDisciplinaModal(false);
-    setDisciplinaSelecionada(null);
-    setFormDataDisciplina({ nome: '', cor: 'azul', topicos: [] });
+    setSelectedSubject(null);
+    setSubjectFormData({ name: '', color: 'blue', topics: [] });
     setEditandoTopico(null);
     setNovoTopico('');
   };
 
-  const handleAdicionarTopico = () => {
+  const handleAddTopic = () => {
     if (novoTopico.trim()) {
-      const topicoJaExiste = formDataDisciplina.topicos.includes(novoTopico.trim());
-      if (topicoJaExiste) {
-        alert('Este tópico já existe!');
+      const topicExists = subjectFormData.topics.includes(novoTopico.trim());
+      if (topicExists) {
+        alert('This topic already exists!');
         return;
       }
-      setFormDataDisciplina(prev => ({
+      setSubjectFormData(prev => ({
         ...prev,
-        topicos: [...prev.topicos, novoTopico.trim()]
+        topics: [...prev.topics, novoTopico.trim()]
       }));
       setNovoTopico('');
     }
   };
 
-  const handleEditarTopico = (index, novoTexto) => {
-    setFormDataDisciplina(prev => ({
+  const handleEditTopic = (index, newText) => {
+    setSubjectFormData(prev => ({
       ...prev,
-      topicos: prev.topicos.map((topico, i) => i === index ? novoTexto : topico)
+      topics: prev.topics.map((topic, i) => i === index ? newText : topic)
     }));
     setEditandoTopico(null);
   };
 
-  const handleRemoverTopico = (index) => {
-    setFormDataDisciplina(prev => ({
+  const handleRemoveTopic = (index) => {
+    setSubjectFormData(prev => ({
       ...prev,
-      topicos: prev.topicos.filter((_, i) => i !== index)
+      topics: prev.topics.filter((_, i) => i !== index)
     }));
   };
 
-  const handleEditDisciplinaSubmit = async (e) => {
+  const handleEditSubjectSubmit = async (e) => {
     e.preventDefault();
 
-    if (!disciplinaSelecionada) {
-      alert('Nenhuma disciplina selecionada!');
+    if (!selectedSubject) {
+      alert('No subject selected!');
       return;
     }
 
     try {
-      const testResponse = await fetch(`${API_BASE_URL}/api/planos`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (!testResponse.ok) {
-        alert('Erro de conectividade com o servidor. Verifique se o backend está rodando.');
-        return;
-      }
-    } catch (connectError) {
-      alert('Não foi possível conectar ao servidor. Verifique se o backend está rodando na porta 5000.');
-      return;
-    }
-
-    try {
-      const url = `${API_BASE_URL}/api/planos/${id}/disciplinas/${disciplinaSelecionada._id}`;
+      const url = `${API_BASE_URL}/api/study-plans/${id}/subjects/${selectedSubject._id}`;
 
       const requestData = {
-        nome: formDataDisciplina.nome,
-        cor: formDataDisciplina.cor,
-        topicos: formDataDisciplina.topicos
+        name: subjectFormData.name,
+        color: subjectFormData.color,
+        topics: subjectFormData.topics
       };
 
       const response = await fetch(url, {
@@ -378,73 +341,57 @@ function PlanoDetalhes() {
         body: JSON.stringify(requestData)
       });
 
-      const responseText = await response.text();
-
       if (response.ok) {
-        let updatedPlano;
-        try {
-          updatedPlano = JSON.parse(responseText);
-
-          const disciplinaAtualizada = updatedPlano.disciplinasDetalhadas?.find(d => d._id === disciplinaSelecionada._id);
-          if (!disciplinaAtualizada) {
-          }
-
-        } catch (parseError) {
-          alert('Erro ao processar resposta do servidor');
-          return;
-        }
-
-        setPlano(updatedPlano);
-
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        await fetchPlano();
-
+        await fetchPlan();
         closeEditDisciplinaModal();
-        alert('Disciplina atualizada com sucesso!');
+        alert('Subject updated successfully!');
       } else {
-        alert(`Erro ao atualizar disciplina: ${response.status} - ${responseText}`);
+        const errorText = await response.text();
+        alert(`Error updating subject: ${response.status} - ${errorText}`);
       }
     } catch (error) {
-      alert(`Erro ao atualizar disciplina: ${error.message}`);
+      alert(`Error updating subject: ${error.message}`);
     }
   };
 
-  const handleSalvarNovaDisciplina = async () => {
+  const handleSaveNewSubject = async () => {
     if (!formDataNovaDisciplina.nome.trim()) {
-      alert('Por favor, insira o nome da disciplina.');
+      alert('Please enter a subject name.');
       return;
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/planos/${id}/disciplinas`, {
+      const response = await fetch(`${API_BASE_URL}/api/study-plans/${id}/subjects`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(formDataNovaDisciplina)
+        body: JSON.stringify({
+            name: formDataNovaDisciplina.nome,
+            color: formDataNovaDisciplina.cor,
+            topics: formDataNovaDisciplina.topicos
+        })
       });
 
       if (response.ok) {
-        const updatedPlano = await response.json();
-        setPlano(updatedPlano);
+        await fetchPlan();
         closeNovaDisciplinaModal();
-        alert('Nova disciplina criada com sucesso!');
+        alert('New subject created successfully!');
       } else {
         const errorData = await response.text();
-        alert(`Erro ao criar disciplina: ${response.status} - ${errorData}`);
+        alert(`Error creating subject: ${response.status} - ${errorData}`);
       }
     } catch (error) {
-      alert(`Erro ao criar disciplina: ${error.message}`);
+      alert(`Error creating subject: ${error.message}`);
     }
   };
 
-  const handleAdicionarTopicoNova = () => {
+  const handleAddNewSubjectTopic = () => {
     if (novoTopico.trim()) {
-      const topicoJaExiste = formDataNovaDisciplina.topicos.includes(novoTopico.trim());
-      if (topicoJaExiste) {
-        alert('Este tópico já existe!');
+      const topicExists = formDataNovaDisciplina.topicos.includes(novoTopico.trim());
+      if (topicExists) {
+        alert('This topic already exists!');
         return;
       }
       setFormDataNovaDisciplina(prev => ({
@@ -455,21 +402,21 @@ function PlanoDetalhes() {
     }
   };
 
-  const handleEditarTopicoNova = (index, novoTexto) => {
+  const handleEditNewSubjectTopic = (index, newText) => {
     setFormDataNovaDisciplina(prev => ({
       ...prev,
-      topicos: prev.topicos.map((topico, i) => i === index ? novoTexto : topico)
+      topicos: prev.topicos.map((topico, i) => i === index ? newText : topico)
     }));
   };
 
-  const handleRemoverTopicoNova = (index) => {
+  const handleRemoveNewSubjectTopic = (index) => {
     setFormDataNovaDisciplina(prev => ({
       ...prev,
-      topicos: prev.topicos.filter((_, i) => i !== index)
+      topicos: prev.topics.filter((_, i) => i !== index)
     }));
   };
 
-  const closeNovaDisciplinaModal = () => {
+  const closeNewSubjectModal = () => {
     setIsClosing(true);
     setTimeout(() => {
       setShowNovaDisciplinaModal(false);
@@ -483,52 +430,29 @@ function PlanoDetalhes() {
     }, 250);
   };
 
-  const handleRemoverDisciplina = async (disciplina) => {
-    const confirmDelete = window.confirm(`Tem certeza que deseja remover a disciplina "${disciplina.nome}" do estudo?`);
+  const handleRemoveSubject = async (subject) => {
+    const confirmDelete = window.confirm(`Are you sure you want to remove the subject "${subject.name}" from the study?`);
 
     if (!confirmDelete) return;
 
-    const originalText = event.target.textContent;
-    if (event.target) {
-      event.target.textContent = 'Removendo...';
-      event.target.disabled = true;
-    }
-
     try {
-      console.log('=== REMOVENDO DISCIPLINA ===');
-      console.log('Disciplina:', disciplina);
-      console.log('Plano ID:', id);
-      console.log('URL:', `${API_BASE_URL}/api/planos/${id}/disciplinas/${disciplina._id}`);
-      console.log('Token presente:', !!token);
-
-      const response = await fetch(`${API_BASE_URL}/api/planos/${id}/disciplinas/${disciplina._id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/study-plans/${id}/subjects/${subject._id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
-
       if (response.ok) {
-        const data = await response.json();
-        console.log('Response data:', data);
-        alert(data.message || 'Disciplina removida com sucesso!');
-        await fetchPlano();
+        alert('Subject removed successfully!');
+        await fetchPlan();
       } else {
         const errorData = await response.json();
-        console.error('Erro na resposta:', errorData);
-        alert(errorData.message || 'Erro ao remover disciplina. Tente novamente.');
+        alert(errorData.message || 'Error removing subject. Please try again.');
       }
     } catch (error) {
-      console.error('Erro ao remover disciplina:', error);
-      alert(`Erro de conexão: ${error.message}. Verifique sua internet e tente novamente.`);
-    } finally {
-      if (event.target) {
-        event.target.textContent = originalText;
-        event.target.disabled = false;
-      }
+      console.error('Error removing subject:', error);
+      alert(`Connection error: ${error.message}.`);
     }
   };
 
@@ -536,7 +460,7 @@ function PlanoDetalhes() {
     e.preventDefault();
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/planos/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/study-plans/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -546,39 +470,41 @@ function PlanoDetalhes() {
       });
 
       if (response.ok) {
-        await fetchPlano();
+        await fetchPlan();
         closeEditModal();
       } else {
+        // Handle error
       }
     } catch (error) {
+      // Handle error
     }
   };
 
-  const handleDelete = async () => {
-    if (!plano.nome) return;
+  const handleDeletePlan = async () => {
+    if (!plan.name) return;
 
-    const confirmDelete = window.confirm(`Tem certeza que deseja excluir o estudo "${plano.nome}"?`);
+    const confirmDelete = window.confirm(`Are you sure you want to delete the study plan "${plan.name}"? This action cannot be undone.`);
 
     if (!confirmDelete) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/planos/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/study-plans/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (response.ok) {
-        alert('Estudo excluído com sucesso!');
-        navigate('/planos');
+        alert('Study plan deleted successfully!');
+        navigate('/study-plans');
       } else {
-        alert('Erro ao excluir estudo. Tente novamente.');
+        alert('Error deleting study plan. Please try again.');
       }
     } catch (error) {
-      alert('Erro ao excluir estudo. Tente novamente.');
+      alert('Error deleting study plan. Please try again.');
     }
   };
 
-  const formatarTempo = (segundos) => {
+  const formatTime = (seconds) => {
     const horas = Math.floor(segundos / 3600);
     const minutos = Math.floor((segundos % 3600) / 60);
     const segundosRestantes = segundos % 60;
@@ -630,7 +556,7 @@ function PlanoDetalhes() {
     );
   }
 
-  if (!plano || !plano.nome) {
+  if (!plan || !plan.name) {
     return (
       <div style={{
         display: 'flex',
@@ -640,7 +566,7 @@ function PlanoDetalhes() {
         fontSize: '18px',
         color: 'var(--darkmode-text-secondary)'
       }}>
-        Plano não encontrado
+        Study Plan not found
       </div>
     );
   }
@@ -794,66 +720,15 @@ function PlanoDetalhes() {
         <div className="plano-hero">
           <div className="plano-hero-content">
             <div className="plano-info">
-              <h1 className="plano-hero-title">{plano.nome}</h1>
-
-              {/* Exibir informações de Instituição e Edital APENAS para estudos não-personalizados */}
-              {plano.editais && Array.isArray(plano.editais) && plano.editais.length > 0 &&
-                /* @ts-ignore */
-                plano.editais.some(edital => {
-                  if (!edital || typeof edital !== 'object' || !edital.nome) return false;
-                  const nomeEdital = edital.nome.toLowerCase().trim();
-                  return nomeEdital !== 'editalpersonalizado' && nomeEdital !== 'personalizado';
-                }) && (
-                  <div style={{
-                    marginTop: '12px',
-                    marginBottom: '8px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '6px'
-                  }}>
-                    {/* @ts-ignore */}
-                    {plano.editais
-                      .filter(edital => {
-                        if (!edital || typeof edital !== 'object' || !edital.nome) return false;
-                        const nomeEdital = edital.nome.toLowerCase().trim();
-                        return nomeEdital !== 'editalpersonalizado' && nomeEdital !== 'personalizado';
-                      })
-                      .map((edital, index) => (
-                        <div key={index} style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          fontSize: '14px',
-                          color: 'var(--darkmode-text-secondary)'
-                        }}>
-                          {/* @ts-ignore */}
-                          <span style={{
-                            fontWeight: '600',
-                            color: '#E66912'
-                          }}>
-                            {edital.instituicao && edital.instituicao.nome
-                              ? edital.instituicao.nome
-                              : 'Instituição'}
-                            {edital.instituicao && edital.instituicao.sigla && (
-                              <span> ({edital.instituicao.sigla})</span>
-                            )}
-                          </span>
-                          <span> - </span>
-                          {/* @ts-ignore */}
-                          <span>{edital.nome}</span>
-                        </div>
-                      ))}
-                  </div>
-                )}
-
-              <p className="plano-hero-description">{plano.descricao || 'Sem descrição'}</p>
+              <h1 className="plano-hero-title">{plan.name}</h1>
+              <p className="plano-hero-description">{plan.description || 'No description'}</p>
             </div>
             <div className="plano-actions">
               <button
-                onClick={handleNovaDisciplina}
+                onClick={handleNewSubject}
                 className="btn-primary-hero"
               >
-                + Nova Disciplina
+                + New Subject
               </button>
               <button
                 onClick={(e) => {
@@ -863,13 +738,13 @@ function PlanoDetalhes() {
                 }}
                 className="btn-secondary-hero"
               >
-                Editar
+                Edit
               </button>
               <button
-                onClick={handleDelete}
+                onClick={handleDeletePlan}
                 className="btn-danger-hero"
               >
-                Excluir
+                Delete
               </button>
             </div>
           </div>
@@ -887,8 +762,8 @@ function PlanoDetalhes() {
               </svg>
             </div>
             <div className="stat-content">
-              <div className="stat-number">{plano.disciplinas}</div>
-              <div className="stat-label">Disciplinas</div>
+              <div className="stat-number">{plan.subjectCount || 0}</div>
+              <div className="stat-label">Subjects</div>
             </div>
           </div>
           <div className="stat-card-dashboard">
@@ -902,12 +777,9 @@ function PlanoDetalhes() {
             </div>
             <div className="stat-content">
               <div className="stat-number">
-                {plano.disciplinasDetalhadas?.reduce((total, disciplina) => {
-                  const topicosTotal = disciplina.topicosTotal || disciplina.topicos?.length || 0;
-                  return total + topicosTotal;
-                }, 0) || 0}
+                {plan.topicCount || 0}
               </div>
-              <div className="stat-label">Tópicos</div>
+              <div className="stat-label">Topics</div>
             </div>
           </div>
           <div className="stat-card-dashboard">
@@ -918,56 +790,52 @@ function PlanoDetalhes() {
               </svg>
             </div>
             <div className="stat-content">
-              <div className="stat-number">{tempoDeEstudos}</div>
-              <div className="stat-label">Horas de Estudo</div>
+              <div className="stat-number">{formatTime(plan.totalStudyTime || 0)}</div>
+              <div className="stat-label">Study Time</div>
             </div>
           </div>
         </div>
 
-        {/* Disciplinas Section */}
+        {/* Subjects Section */}
         <div className="disciplinas-section">
           <div className="section-header">
             <h2 className="section-title">
-              Disciplinas
+              Subjects
             </h2>
             <div className="section-subtitle">
-              Escolha a disciplina
+              Choose a subject to study
             </div>
           </div>
 
-          {/* Lista de Disciplinas em Cards Horizontais */}
           <div className="disciplinas-list">
-            {plano.disciplinasDetalhadas?.map((disciplina, index) => {
-              const questoesResolvidas = disciplina.questoesResolvidas || 0;
-
-              const temAtividade = disciplina.horasEstudo > 0 || questoesResolvidas > 0;
-              const topicosConcluidos = disciplina.topicosEstudados || 0;
-              const topicosTotal = disciplina.topicosTotal || disciplina.topicos?.length || 0;
+            {plan.subjects?.map((subject, index) => {
+              const temAtividade = subject.studyTime > 0 || subject.questionsDone > 0;
+              const topicosConcluidos = subject.topicsCompleted || 0;
+              const topicosTotal = subject.topicCount || 0;
               const percentualConclusao = topicosTotal > 0 ? (topicosConcluidos / topicosTotal) * 100 : 0;
 
-              // Verificar se a disciplina está sendo estudada (tem tópicos com timer > 0)
-              const estaEstudando = verificarDisciplinaEstudando(disciplina);
+              const estaEstudando = isDisciplineBeingStudied(subject);
 
               let statusEstudo, statusCor;
               if (estaEstudando) {
-                statusEstudo = 'Estudando';
+                statusEstudo = 'Studying';
                 statusCor = '#10B981';
               } else if (percentualConclusao >= 100) {
-                statusEstudo = 'Finalizado';
+                statusEstudo = 'Completed';
                 statusCor = '#10B981';
               } else if (temAtividade) {
-                statusEstudo = 'Em atividade';
+                statusEstudo = 'In Progress';
                 statusCor = '#E66912';
               } else {
-                statusEstudo = 'Não iniciado';
+                statusEstudo = 'Not Started';
                 statusCor = 'var(--darkmode-text-secondary)';
               }
 
               return (
                 <div
-                  key={disciplina._id}
+                  key={subject._id}
                   className="disciplina-card-horizontal"
-                  onClick={() => handleVisualizarDisciplina(disciplina)}
+                  onClick={() => handleViewSubject(subject)}
                 >
                   <div className="disciplina-main-content">
                     <div className="disciplina-header-horizontal">
@@ -980,13 +848,13 @@ function PlanoDetalhes() {
                                 width: '8px',
                                 height: '8px',
                                 borderRadius: '50%',
-                                backgroundColor: cores[disciplina.cor] || cores.azul,
+                                backgroundColor: cores[subject.color] || cores.azul,
                                 flexShrink: 0
                               }}
                             ></div>
-                            <span>{disciplina.nome}</span>
+                            <span>{subject.name}</span>
                           </div>
-                          {statusEstudo !== 'Não iniciado' && (
+                          {statusEstudo !== 'Not Started' && (
                             <span
                               className="status-badge"
                               style={{
@@ -1014,11 +882,11 @@ function PlanoDetalhes() {
                           <span className="meta-item">
                             {(() => {
                               if (topicosTotal === 0) {
-                                return 'Nenhum tópico';
+                                return 'No topics';
                               } else if (topicosTotal === 1) {
-                                return '1 tópico';
+                                return '1 topic';
                               } else {
-                                return `${topicosTotal} tópicos`;
+                                return `${topicosTotal} topics`;
                               }
                             })()}
                           </span>
@@ -1032,38 +900,37 @@ function PlanoDetalhes() {
                       className="btn-action-inline btn-editar"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleEditarDisciplina(disciplina);
+                        handleEditSubject(subject);
                       }}
                     >
-                      Gerenciar Tópicos
+                      Manage Topics
                     </button>
                     <button
                       className="btn-action-inline btn-remover"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleRemoverDisciplina(disciplina);
+                        handleRemoveSubject(subject);
                       }}
                     >
-                      Remover
+                      Remove
                     </button>
                   </div>
                 </div>
               );
             })}
 
-            {/* Estado vazio para disciplinas */}
-            {(!plano.disciplinasDetalhadas || plano.disciplinasDetalhadas.length === 0) && (
+            {(!plan.subjects || plan.subjects.length === 0) && (
               <div className="empty-disciplinas">
                 <div className="empty-icon">📚</div>
-                <h3 className="empty-title">Nenhuma disciplina cadastrada</h3>
+                <h3 className="empty-title">No subjects added yet</h3>
                 <p className="empty-text">
-                  Comece adicionando sua primeira disciplina ao plano de estudos
+                  Start by adding your first subject to the study plan.
                 </p>
                 <button
-                  onClick={handleNovaDisciplina}
+                  onClick={handleNewSubject}
                   className="btn-empty-state"
                 >
-                  + Adicionar Primeira Disciplina
+                  + Add First Subject
                 </button>
               </div>
             )}
@@ -1111,7 +978,7 @@ function PlanoDetalhes() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 style={{ marginBottom: '20px', fontSize: '24px', fontWeight: '600' }}>
-              Editar Estudo
+              Edit Study
             </h2>
 
             <form onSubmit={handleEditSubmit}>
@@ -1122,12 +989,12 @@ function PlanoDetalhes() {
                   fontWeight: '500',
                   color: 'var(--darkmode-text-primary)'
                 }}>
-                  Nome do Estudo:
+                  Study Name:
                 </label>
                 <input
                   type="text"
-                  value={formData.nome}
-                  onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   style={{
                     width: '100%',
                     padding: '12px',
@@ -1150,11 +1017,11 @@ function PlanoDetalhes() {
                   fontWeight: '500',
                   color: 'var(--darkmode-text-primary)'
                 }}>
-                  Descrição:
+                  Description:
                 </label>
                 <textarea
-                  value={formData.descricao}
-                  onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   rows={4}
                   style={{
                     width: '100%',
@@ -1168,7 +1035,7 @@ function PlanoDetalhes() {
                   }}
                   onFocus={(e) => e.target.style.borderColor = 'var(--darkmode-text-link)'}
                   onBlur={(e) => e.target.style.borderColor = 'var(--darkmode-border-secondary)'}
-                  placeholder="Adicione uma descrição para o estudo..."
+                  placeholder="Add a description for the study..."
                 />
               </div>
 
@@ -1187,7 +1054,7 @@ function PlanoDetalhes() {
                     color: 'var(--darkmode-text-primary)'
                   }}
                 >
-                  Cancelar
+                  Cancel
                 </button>
                 <button
                   type="submit"
@@ -1202,7 +1069,7 @@ function PlanoDetalhes() {
                     color: 'var(--darkmode-text-primary)'
                   }}
                 >
-                  Salvar Alterações
+                  Save Changes
                 </button>
               </div>
             </form>
@@ -1249,10 +1116,10 @@ function PlanoDetalhes() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 style={{ marginBottom: '20px', fontSize: '24px', fontWeight: '600' }}>
-              Editar Disciplina
+              Edit Subject
             </h2>
 
-            <form onSubmit={handleEditDisciplinaSubmit}>
+            <form onSubmit={handleEditSubjectSubmit}>
               {/* Nome e Cor lado a lado */}
               <div style={{
                 display: 'grid',
@@ -1267,12 +1134,12 @@ function PlanoDetalhes() {
                     fontWeight: '500',
                     color: 'var(--darkmode-text-primary)'
                   }}>
-                    Nome da Disciplina:
+                    Subject Name:
                   </label>
                   <input
                     type="text"
-                    value={formDataDisciplina.nome}
-                    onChange={(e) => setFormDataDisciplina(prev => ({ ...prev, nome: e.target.value }))}
+                    value={subjectFormData.name}
+                    onChange={(e) => setSubjectFormData(prev => ({ ...prev, name: e.target.value }))}
                     style={{
                       width: '100%',
                       padding: '12px',
@@ -1295,11 +1162,11 @@ function PlanoDetalhes() {
                     fontWeight: '500',
                     color: 'var(--darkmode-text-primary)'
                   }}>
-                    Cor da Disciplina:
+                    Subject Color:
                   </label>
                   <ColorPicker
-                    value={formDataDisciplina.cor}
-                    onChange={(cor) => setFormDataDisciplina(prev => ({ ...prev, cor }))}
+                    value={subjectFormData.color}
+                    onChange={(color) => setSubjectFormData(prev => ({ ...prev, color }))}
                     colors={CORES_DISCIPLINAS}
                   />
                 </div>
@@ -1312,12 +1179,12 @@ function PlanoDetalhes() {
                   fontWeight: '500',
                   color: 'var(--darkmode-text-primary)'
                 }}>
-                  Tópicos
+                  Topics
                 </label>
 
                 {/* Lista de tópicos existentes */}
                 <div style={{ marginBottom: '15px' }}>
-                  {formDataDisciplina.topicos.map((topico, index) => (
+                  {subjectFormData.topics.map((topic, index) => (
                     <div
                       key={index}
                       style={{
@@ -1334,13 +1201,10 @@ function PlanoDetalhes() {
                       {editandoTopico === index ? (
                         <input
                           type="text"
-                          value={topico}
+                          value={topic}
                           onChange={(e) => {
-                            const novoTexto = e.target.value;
-                            setFormDataDisciplina(prev => ({
-                              ...prev,
-                              topicos: prev.topicos.map((t, i) => i === index ? novoTexto : t)
-                            }));
+                            const newText = e.target.value;
+                            handleEditTopic(index, newText);
                           }}
                           onKeyPress={(e) => {
                             if (e.key === 'Enter') {
@@ -1361,9 +1225,9 @@ function PlanoDetalhes() {
                       ) : (
                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span style={{ fontSize: '14px', color: 'var(--darkmode-text-primary)' }}>
-                            {index + 1}. {topico}
+                            {index + 1}. {topic}
                           </span>
-                          {verificarTopicoAgendado(disciplinaSelecionada?._id, topico) && (
+                          {verificarTopicoAgendado(selectedSubject?._id, topic) && (
                             <span style={{
                               fontSize: '11px',
                               fontWeight: '600',
@@ -1373,7 +1237,7 @@ function PlanoDetalhes() {
                               borderRadius: '4px',
                               border: '1px solid rgba(255, 107, 53, 0.3)'
                             }}>
-                              Agendada
+                              Scheduled
                             </span>
                           )}
                         </div>
@@ -1393,12 +1257,12 @@ function PlanoDetalhes() {
                           fontWeight: '500'
                         }}
                       >
-                        {editandoTopico === index ? 'Salvar' : 'Editar'}
+                        {editandoTopico === index ? 'Save' : 'Edit'}
                       </button>
 
                       <button
                         type="button"
-                        onClick={() => handleRemoverTopico(index)}
+                        onClick={() => handleRemoveTopic(index)}
                         style={{
                           padding: '4px 8px',
                           backgroundColor: '#EF4444',
@@ -1410,7 +1274,7 @@ function PlanoDetalhes() {
                           fontWeight: '500'
                         }}
                       >
-                        Remover
+                        Remove
                       </button>
                     </div>
                   ))}
@@ -1429,10 +1293,10 @@ function PlanoDetalhes() {
                     onKeyPress={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        handleAdicionarTopico();
+                        handleAddTopic();
                       }
                     }}
-                    placeholder="Digite um novo tópico (Ex: PDF 1 - Radegondes)"
+                    placeholder="Enter a new topic..."
                     style={{
                       flex: 1,
                       padding: '8px 12px',
@@ -1447,7 +1311,7 @@ function PlanoDetalhes() {
                   />
                   <button
                     type="button"
-                    onClick={handleAdicionarTopico}
+                    onClick={handleAddTopic}
                     style={{
                       padding: '8px 16px',
                       backgroundColor: '#E66912',
@@ -1460,7 +1324,7 @@ function PlanoDetalhes() {
                       whiteSpace: 'nowrap'
                     }}
                   >
-                    Adicionar
+                    Add
                   </button>
                 </div>
               </div>
@@ -1480,7 +1344,7 @@ function PlanoDetalhes() {
                     color: 'var(--darkmode-text-primary)'
                   }}
                 >
-                  Cancelar
+                  Cancel
                 </button>
                 <button
                   type="submit"
@@ -1495,7 +1359,7 @@ function PlanoDetalhes() {
                     color: 'var(--darkmode-text-primary)'
                   }}
                 >
-                  Salvar Alterações
+                  Save Changes
                 </button>
               </div>
             </form>
@@ -1519,7 +1383,7 @@ function PlanoDetalhes() {
             justifyContent: 'center',
             animation: isClosing ? 'fadeOut 0.25s ease-out' : 'fadeIn 0.25s ease-in'
           }}
-          onClick={closeNovaDisciplinaModal}
+          onClick={closeNewSubjectModal}
         >
           <div
             style={{
@@ -1544,12 +1408,12 @@ function PlanoDetalhes() {
               borderBottom: '2px solid var(--darkmode-bg-quaternary)',
               paddingBottom: '15px'
             }}>
-              Nova Disciplina
+              New Subject
             </h2>
 
             <form onSubmit={(e) => {
               e.preventDefault();
-              handleSalvarNovaDisciplina();
+              handleSaveNewSubject();
             }}>
               <div style={{
                 display: 'grid',
@@ -1564,13 +1428,13 @@ function PlanoDetalhes() {
                     fontWeight: '500',
                     color: 'var(--darkmode-text-primary)'
                   }}>
-                    Nome da Disciplina:
+                    Subject Name:
                   </label>
                   <input
                     type="text"
                     value={formDataNovaDisciplina.nome}
                     onChange={(e) => setFormDataNovaDisciplina(prev => ({ ...prev, nome: e.target.value }))}
-                    placeholder="Digite o nome da disciplina (Ex: Matemática, Português, Direito Administrativo)"
+                    placeholder="Enter subject name (e.g., Math, Portuguese)"
                     style={{
                       width: '100%',
                       padding: '12px',
@@ -1593,7 +1457,7 @@ function PlanoDetalhes() {
                     fontWeight: '500',
                     color: 'var(--darkmode-text-primary)'
                   }}>
-                    Cor da Disciplina:
+                    Subject Color:
                   </label>
                   <ColorPicker
                     value={formDataNovaDisciplina.cor}
@@ -1610,12 +1474,12 @@ function PlanoDetalhes() {
                   fontWeight: '500',
                   color: 'var(--darkmode-text-primary)'
                 }}>
-                  Tópicos
+                  Topics
                 </label>
 
                 {/* Lista de tópicos existentes */}
                 <div style={{ marginBottom: '15px' }}>
-                  {formDataNovaDisciplina.topicos.map((topico, index) => (
+                  {formDataNovaDisciplina.topicos.map((topic, index) => (
                     <div
                       key={index}
                       style={{
@@ -1630,12 +1494,12 @@ function PlanoDetalhes() {
                       }}
                     >
                       <span style={{ flex: 1, fontSize: '14px', color: 'var(--darkmode-text-primary)' }}>
-                        {index + 1}. {topico}
+                        {index + 1}. {topic}
                       </span>
 
                       <button
                         type="button"
-                        onClick={() => handleRemoverTopicoNova(index)}
+                        onClick={() => handleRemoveNewSubjectTopic(index)}
                         style={{
                           padding: '4px 8px',
                           backgroundColor: '#EF4444',
@@ -1647,7 +1511,7 @@ function PlanoDetalhes() {
                           fontWeight: '500'
                         }}
                       >
-                        Remover
+                        Remove
                       </button>
                     </div>
                   ))}
@@ -1667,10 +1531,10 @@ function PlanoDetalhes() {
                     onKeyPress={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        handleAdicionarTopicoNova();
+                        handleAddNewSubjectTopic();
                       }
                     }}
-                    placeholder="Digite um novo tópico (Ex: PDF 1 - Radegondes)"
+                    placeholder="Enter a new topic..."
                     style={{
                       flex: 1,
                       padding: '10px 12px',
@@ -1683,7 +1547,7 @@ function PlanoDetalhes() {
                   />
                   <button
                     type="button"
-                    onClick={handleAdicionarTopicoNova}
+                    onClick={handleAddNewSubjectTopic}
                     style={{
                       padding: '8px 16px',
                       backgroundColor: '#E66912',
@@ -1696,7 +1560,7 @@ function PlanoDetalhes() {
                       transition: 'background-color 0.2s'
                     }}
                   >
-                    Adicionar
+                    Add
                   </button>
                 </div>
               </div>
@@ -1710,7 +1574,7 @@ function PlanoDetalhes() {
               }}>
                 <button
                   type="button"
-                  onClick={closeNovaDisciplinaModal}
+                  onClick={closeNewSubjectModal}
                   style={{
                     padding: '12px 24px',
                     backgroundColor: 'transparent',
@@ -1723,7 +1587,7 @@ function PlanoDetalhes() {
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  Cancelar
+                  Cancel
                 </button>
                 <button
                   type="submit"
@@ -1739,7 +1603,7 @@ function PlanoDetalhes() {
                     transition: 'background-color 0.2s ease'
                   }}
                 >
-                  Salvar Disciplina
+                  Save Subject
                 </button>
               </div>
             </form>

@@ -13,14 +13,14 @@ import AbaTimers from '../../components/abaTimers/abaTimers';
 
 function DisciplinaDetalhes() {
 
-  const { planoId, disciplinaId } = useParams();
+  const { planoId: planId, disciplinaId: subjectId } = useParams();
   const navigate = useNavigate();
   const { token, authenticatedFetch, forceLogout } = useAuth();
   const { toaster, showError, hideToaster } = useToaster();
   const { getTotalTimeForDisciplina } = useTimer();
   const [loading, setLoading] = useState(true);
-  const [disciplina, setDisciplina] = useState(null);
-  const [plano, setPlano] = useState(null);
+  const [subject, setSubject] = useState(null);
+  const [plan, setPlan] = useState(null);
 
   // Estados do modal de registro de estudo
   const [modalAberto, setModalAberto] = useState(false);

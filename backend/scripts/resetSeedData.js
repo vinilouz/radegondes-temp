@@ -1,26 +1,26 @@
-require('dotenv').config();
+require('dotenv').config({ path: '../.env' }); // Adjust path to .env
 const mongoose = require('mongoose');
-const Categoria = require('../models/Categoria');
-const Instituicao = require('../models/Instituicao');
-const seedDatabase = require('../config/seedDatabase');
+const Category = require('../src/models/Category');
+const Institution = require('../src/models/Institution');
+const seedDatabase = require('../src/config/seedDatabase'); // This also needs to be checked/updated
 
 async function resetAndSeed() {
   try {
     await mongoose.connect(process.env.MONGO_URI);
-    console.log('Conectado ao MongoDB');
+    console.log('Connected to MongoDB');
     
-    // Limpar dados existentes
-    await Categoria.deleteMany({});
-    await Instituicao.deleteMany({});
-    console.log('Dados limpos');
+    // Clear existing data
+    await Category.deleteMany({});
+    await Institution.deleteMany({});
+    console.log('Data cleared');
     
-    // Executar seed novamente
+    // Run seed again
     await seedDatabase();
-    console.log('Seed executado com sucesso');
+    console.log('Seed executed successfully');
     
     process.exit(0);
   } catch (error) {
-    console.error('Erro:', error);
+    console.error('Error:', error);
     process.exit(1);
   }
 }

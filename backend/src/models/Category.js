@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
-const EditalSchema = new mongoose.Schema({
-  nome: {
+const CategorySchema = new mongoose.Schema({
+  name: {
     type: String,
     required: true,
     trim: true,
@@ -12,4 +12,4 @@ const EditalSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('Edital', EditalSchema);
+module.exports = mongoose.model('Category', CategorySchema);

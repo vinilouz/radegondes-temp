@@ -3,171 +3,156 @@ import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';
 import { SkeletonStats, SkeletonList } from '../../components/Skeleton';
 
-function Estatisticas() {
+function Statistics() {
   const { token } = useAuth();
-  /** @        function Estatisticas() {
-  const { token } = useAuth();
-  /** @type {[any, Function]} */
   const [stats, setStats] = useState({
-    totalPlanos: 0,
-    totalDisciplinas: 0,
-    totalTopicos: 0,
-    totalQuestoes: 0,
-    questoesCertas: 0,
-    totalTempoEstudo: 0,
-    totalRegistrosEstudo: 0,
-    totalRevisoes: 0,
-    planosRecentes: [],
-    disciplinasMaisEstudadas: [],
-    tempoEstudoPorMes: []
+    totalPlans: 0,
+    totalSubjects: 0,
+    totalTopics: 0,
+    totalQuestions: 0,
+    correctQuestions: 0,
+    totalStudyTime: 0,
+    totalStudyLogs: 0,
+    totalReviews: 0,
+    recentPlans: [],
+    mostStudiedSubjects: [],
+    studyTimeByMonth: []
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    document.title = 'Estatísticas - Radegondes';
-    fetchEstatisticas();
+    document.title = 'Statistics - Radegondes';
+    fetchStatistics();
   }, []);
 
-  const fetchEstatisticas = async () => {
+  const fetchStatistics = async () => {
     try {
       setLoading(true);
       
-      // Buscar dados reais de diferentes endpoints
-      const [planosRes, registrosRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/planos`, {
+      const [plansRes, logsRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/study-plans`, {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        fetch(`${API_BASE_URL}/api/registros-estudo`, {
+        fetch(`${API_BASE_URL}/api/study-logs`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       ]);
 
-      const planos = planosRes.ok ? await planosRes.json() : [];
-      const registrosData = registrosRes.ok ? await registrosRes.json() : { registros: [] };
-      const registros = registrosData.registros || registrosData;
+      const plans = plansRes.ok ? await plansRes.json() : [];
+      const logsData = logsRes.ok ? await logsRes.json() : { studyLogs: [] };
+      const logs = logsData.studyLogs || logsData;
 
-      console.log('📊 Dados coletados:', { 
-        planos: planos.length, 
-        registros: registros.length
+      console.log('📊 Data collected:', {
+        plans: plans.length,
+        logs: logs.length
       });
 
-      // Calcular estatísticas reais
-      const totalPlanos = Array.isArray(planos) ? planos.length : 0;
+      const totalPlans = Array.isArray(plans) ? plans.length : 0;
       
-      // Contar disciplinas únicas dos planos do usuário
-      const disciplinasUnicas = new Set();
-      planos.forEach(plano => {
-        if (plano.disciplinas && Array.isArray(plano.disciplinas)) {
-          plano.disciplinas.forEach(disc => {
-            disciplinasUnicas.add(disc._id || disc.id || disc);
+      const uniqueSubjects = new Set();
+      plans.forEach(plan => {
+        if (plan.subjects && Array.isArray(plan.subjects)) {
+          plan.subjects.forEach(subject => {
+            uniqueSubjects.add(subject._id || subject.id || subject);
           });
         }
       });
-      const totalDisciplinas = disciplinasUnicas.size;
+      const totalSubjects = uniqueSubjects.size;
 
-      // Contar tópicos únicos dos registros (apenas registros que têm tópico preenchido)
-      const topicosUnicos = new Set();
-      registros.forEach(registro => {
-        if (registro.topico && registro.topico.trim() !== '') {
-          topicosUnicos.add(`${registro.disciplinaId}-${registro.topico.trim()}`);
+      const uniqueTopics = new Set();
+      logs.forEach(log => {
+        if (log.topic?.name && log.topic.name.trim() !== '') {
+          uniqueTopics.add(`${log.topic.subject}-${log.topic.name.trim()}`);
         }
       });
-      const totalTopicos = topicosUnicos.size;
+      const totalTopics = uniqueTopics.size;
 
-      // Calcular tempo total de estudo (em segundos) - apenas registros com tempo preenchido
-      const totalTempoEstudo = registros.reduce((total, registro) => {
-        if (registro.tempoEstudo && !isNaN(registro.tempoEstudo)) {
-          return total + (Number(registro.tempoEstudo) * 60); // converter minutos para segundos
+      const totalStudyTime = logs.reduce((total, log) => {
+        if (log.duration && !isNaN(log.duration)) {
+          return total + Number(log.duration);
         }
         return total;
       }, 0);
 
-      // Contar apenas registros de estudo válidos (com dados preenchidos)
-      const registrosValidos = registros.filter(r => 
-        r.topico && r.topico.trim() !== '' && r.disciplinaId
-      );
-      const totalRegistrosEstudo = registrosValidos.length;
+      const validLogs = logs.filter(l => l.topic?.name && l.topic.name.trim() !== '');
+      const totalStudyLogs = validLogs.length;
 
-      // Contar revisões (registros com dataOpcao === 'agendar' e data preenchida)
-      const totalRevisoes = registros.filter(r => 
-        r.dataOpcao === 'agendar' && r.dataAgendada && r.dataAgendada.trim() !== ''
+      const totalReviews = logs.filter(l =>
+        l.dateOption === 'schedule' && l.scheduledDate && l.scheduledDate.trim() !== ''
       ).length;
 
-      // Calcular questões resolvidas (soma de questoesRealizadas de todos os registros)
-      const totalQuestoes = registros.reduce((total, registro) => {
-        if (registro.questoesRealizadas && !isNaN(registro.questoesRealizadas)) {
-          return total + Number(registro.questoesRealizadas);
+      const totalQuestions = logs.reduce((total, log) => {
+        if (log.questionsCompleted && !isNaN(log.questionsCompleted)) {
+          return total + Number(log.questionsCompleted);
         }
         return total;
       }, 0);
 
-      // Calcular questões certas do último registro de cada tópico
-      const ultimosRegistrosPorTopico = {};
-      registros.forEach(registro => {
-        if (registro.topico && registro.topico.trim() !== '' && registro.disciplinaId) {
-          const chaveTopico = `${registro.disciplinaId}-${registro.topico.trim()}`;
-          const dataRegistro = new Date(registro.createdAt || registro.dataRegistro || Date.now());
+      const lastLogByTopic = {};
+      logs.forEach(log => {
+        if (log.topic?.name && log.topic.name.trim() !== '') {
+          const topicKey = `${log.topic.subject}-${log.topic.name.trim()}`;
+          const logDate = new Date(log.createdAt || log.date || Date.now());
           
-          if (!ultimosRegistrosPorTopico[chaveTopico] || 
-              new Date(ultimosRegistrosPorTopico[chaveTopico].createdAt || ultimosRegistrosPorTopico[chaveTopico].dataRegistro || 0) < dataRegistro) {
-            ultimosRegistrosPorTopico[chaveTopico] = registro;
+          if (!lastLogByTopic[topicKey] ||
+              new Date(lastLogByTopic[topicKey].createdAt || lastLogByTopic[topicKey].date || 0) < logDate) {
+            lastLogByTopic[topicKey] = log;
           }
         }
       });
 
-      const questoesCertas = Object.values(ultimosRegistrosPorTopico).reduce((total, registro) => {
-        if (registro.questoesRealizadas && !isNaN(registro.questoesRealizadas)) {
-          return total + Number(registro.questoesRealizadas);
+      const correctQuestions = Object.values(lastLogByTopic).reduce((total, log) => {
+        if (log.questionsCompleted && !isNaN(log.questionsCompleted)) {
+          return total + Number(log.questionsCompleted);
         }
         return total;
       }, 0);
 
-      console.log('📈 Estatísticas calculadas:', {
-        totalPlanos,
-        totalDisciplinas,
-        totalTopicos,
-        totalQuestoes,
-        questoesCertas,
-        totalTempoEstudo,
-        totalRegistrosEstudo,
-        totalRevisoes
+      console.log('📈 Calculated Statistics:', {
+        totalPlans,
+        totalSubjects,
+        totalTopics,
+        totalQuestions,
+        correctQuestions,
+        totalStudyTime,
+        totalStudyLogs,
+        totalReviews
       });
 
       setStats({
-        totalPlanos,
-        totalDisciplinas,
-        totalTopicos,
-        totalQuestoes,
-        questoesCertas,
-        totalTempoEstudo,
-        totalRegistrosEstudo,
-        totalRevisoes,
-        planosRecentes: [],
-        disciplinasMaisEstudadas: [],
-        tempoEstudoPorMes: []
+        totalPlans,
+        totalSubjects,
+        totalTopics,
+        totalQuestions,
+        correctQuestions,
+        totalStudyTime,
+        totalStudyLogs,
+        totalReviews,
+        recentPlans: [],
+        mostStudiedSubjects: [],
+        studyTimeByMonth: []
       });
     } catch (error) {
-      console.error('Erro ao buscar estatísticas:', error);
-      // Em caso de erro, definir valores zerados
+      console.error('Error fetching statistics:', error);
       setStats({
-        totalPlanos: 0,
-        totalDisciplinas: 0,
-        totalTopicos: 0,
-        totalQuestoes: 0,
-        questoesCertas: 0,
-        totalTempoEstudo: 0,
-        totalRegistrosEstudo: 0,
-        totalRevisoes: 0,
-        planosRecentes: [],
-        disciplinasMaisEstudadas: [],
-        tempoEstudoPorMes: []
+        totalPlans: 0,
+        totalSubjects: 0,
+        totalTopics: 0,
+        totalQuestions: 0,
+        correctQuestions: 0,
+        totalStudyTime: 0,
+        totalStudyLogs: 0,
+        totalReviews: 0,
+        recentPlans: [],
+        mostStudiedSubjects: [],
+        studyTimeByMonth: []
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const formatarTempo = (segundos) => {
+  const formatTime = (seconds) => {
     const horas = Math.floor(segundos / 3600);
     const minutos = Math.floor((segundos % 3600) / 60);
     
@@ -180,17 +165,17 @@ function Estatisticas() {
     }
   };
 
-  const formatarData = (data) => {
-    return new Date(data).toLocaleDateString('pt-BR');
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-US');
   };
 
   if (loading) {
     return (
       <>
         <header className='flex flex-col head'>
-          <h1>Estatísticas</h1>
+          <h1>Statistics</h1>
           <p style={{ margin: '8px 0 0 0', color: 'var(--darkmode-text-secondary)' }}>
-            Acompanhe seu progresso e desempenho nos estudos
+            Track your progress and performance
           </p>
         </header>
         
@@ -244,11 +229,11 @@ function Estatisticas() {
   return (
     <>
       <header className='flex flex-col head'>
-        <h1>Estatísticas</h1>
-        <p>Acompanhe seu progresso e desempenho nos estudos</p>
+        <h1>Statistics</h1>
+        <p>Track your progress and performance in your studies</p>
       </header>
 
-      {/* Cards de Estatísticas Gerais */}
+      {/* General Stats Cards */}
       <div className="stats-grid" style={{ marginBottom: '40px' }}>
         <div className="stat-card">
           <div className="stat-label" style={{
@@ -261,10 +246,10 @@ function Estatisticas() {
               <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" stroke="#FF6B35" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M14 2V8H20" stroke="#FF6B35" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            Total de Estudos
+            Total Studies
           </div>
           <div className="stat-value" style={{ textAlign: 'center' }}>
-            {stats.totalPlanos}
+            {stats.totalPlans}
           </div>
         </div>
         
@@ -278,10 +263,10 @@ function Estatisticas() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M8 6H21M8 12H21M8 18H21M3 6.5H4V5.5H3V6.5ZM3 12.5H4V11.5H3V12.5ZM3 18.5H4V17.5H3V18.5Z" stroke="#FF6B35" strokeWidth="2"/>
             </svg>
-            Tópicos Estudados
+            Topics Studied
           </div>
           <div className="stat-value-orange" style={{ textAlign: 'center' }}>
-            {stats.totalTopicos}
+            {stats.totalTopics}
           </div>
         </div>
         
@@ -295,10 +280,10 @@ function Estatisticas() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 6V12L16 14M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="#FF6B35" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            Tempo Total Estudado
+            Total Study Time
           </div>
           <div className="stat-value" style={{ textAlign: 'center' }}>
-            {formatarTempo(stats.totalTempoEstudo)}
+            {formatTime(stats.totalStudyTime)}
           </div>
         </div>
         
@@ -312,15 +297,15 @@ function Estatisticas() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            Questões Certas
+            Correct Questions
           </div>
           <div className="stat-value-success" style={{ textAlign: 'center' }}>
-            {stats.questoesCertas}
+            {stats.correctQuestions}
           </div>
         </div>
       </div>
 
-      {/* Gráficos de Análise Semanal */}
+      {/* Weekly Analysis Charts */}
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', 
@@ -328,7 +313,6 @@ function Estatisticas() {
         marginBottom: '40px'
       }}>
         
-        {/* Gráfico de Desempenho */}
         <div className="chart-section">
           <h3 style={{ 
             fontSize: '18px', 
@@ -339,7 +323,7 @@ function Estatisticas() {
             alignItems: 'center',
             gap: '8px'
           }}>
-            📊 Desempenho Semanal
+            📊 Weekly Performance
           </h3>
           <div style={{
             background: 'var(--darkmode-bg-secondary)',
@@ -352,7 +336,7 @@ function Estatisticas() {
             justifyContent: 'center',
             flexDirection: 'column'
           }}>
-            {stats.totalRegistrosEstudo > 0 ? (
+            {stats.totalStudyLogs > 0 ? (
               <div style={{ width: '100%', height: '200px', position: 'relative' }}>
                 <div style={{
                   display: 'flex',
@@ -362,11 +346,11 @@ function Estatisticas() {
                   borderBottom: '1px solid var(--darkmode-border-secondary)',
                   gap: '8px'
                 }}>
-                  {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((dia, index) => {
-                    const registrosDia = Math.floor(Math.random() * 5) + 1; // Simular dados por enquanto
-                    const altura = Math.max(20, (registrosDia / 5) * 120);
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => {
+                    const dailyLogs = Math.floor(Math.random() * 5) + 1; // Mock data
+                    const barHeight = Math.max(20, (dailyLogs / 5) * 120);
                     return (
-                      <div key={dia} style={{
+                      <div key={day} style={{
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
@@ -376,7 +360,7 @@ function Estatisticas() {
                           background: `linear-gradient(180deg, var(--orange-primary), ${index % 2 === 0 ? '#FF8A65' : '#FF7043'})`,
                           width: '100%',
                           maxWidth: '40px',
-                          height: `${altura}px`,
+                          height: `${barHeight}px`,
                           borderRadius: '4px 4px 0 0',
                           marginBottom: '8px',
                           position: 'relative',
@@ -389,7 +373,7 @@ function Estatisticas() {
                             fontSize: '10px',
                             fontWeight: '600'
                           }}>
-                            {registrosDia}
+                            {dailyLogs}
                           </span>
                         </div>
                         <span style={{
@@ -397,7 +381,7 @@ function Estatisticas() {
                           color: 'var(--darkmode-text-tertiary)',
                           fontWeight: '500'
                         }}>
-                          {dia}
+                          {day}
                         </span>
                       </div>
                     );
@@ -409,20 +393,19 @@ function Estatisticas() {
                   fontSize: '12px',
                   color: 'var(--darkmode-text-secondary)'
                 }}>
-                  Sessões de estudo por dia da semana
+                  Study sessions per day of the week
                 </div>
               </div>
             ) : (
               <div style={{ textAlign: 'center', color: 'var(--darkmode-text-secondary)' }}>
                 <div style={{ fontSize: '24px', marginBottom: '8px' }}>📊</div>
-                <p>Nenhum dado de desempenho ainda</p>
-                <p style={{ fontSize: '12px' }}>Comece a estudar para ver seu progresso</p>
+                <p>No performance data yet</p>
+                <p style={{ fontSize: '12px' }}>Start studying to see your progress</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Gráfico de Tempo de Estudo */}
         <div className="chart-section">
           <h3 style={{ 
             fontSize: '18px', 
@@ -433,7 +416,7 @@ function Estatisticas() {
             alignItems: 'center',
             gap: '8px'
           }}>
-            ⏱️ Tempo de Estudo Semanal
+            ⏱️ Weekly Study Time
           </h3>
           <div style={{
             background: 'var(--darkmode-bg-secondary)',
@@ -446,7 +429,7 @@ function Estatisticas() {
             justifyContent: 'center',
             flexDirection: 'column'
           }}>
-            {stats.totalTempoEstudo > 0 ? (
+            {stats.totalStudyTime > 0 ? (
               <div style={{ width: '100%', height: '200px', position: 'relative' }}>
                 <div style={{
                   display: 'flex',
@@ -456,11 +439,11 @@ function Estatisticas() {
                   borderBottom: '1px solid var(--darkmode-border-secondary)',
                   gap: '8px'
                 }}>
-                  {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((dia, index) => {
-                    const tempoMinutos = Math.floor(Math.random() * 120) + 30; // Simular dados por enquanto
-                    const altura = Math.max(20, (tempoMinutos / 150) * 120);
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => {
+                    const timeInMinutes = Math.floor(Math.random() * 120) + 30; // Mock data
+                    const barHeight = Math.max(20, (timeInMinutes / 150) * 120);
                     return (
-                      <div key={dia} style={{
+                      <div key={day} style={{
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
@@ -470,7 +453,7 @@ function Estatisticas() {
                           background: `linear-gradient(180deg, #4CAF50, ${index % 2 === 0 ? '#66BB6A' : '#81C784'})`,
                           width: '100%',
                           maxWidth: '40px',
-                          height: `${altura}px`,
+                          height: `${barHeight}px`,
                           borderRadius: '4px 4px 0 0',
                           marginBottom: '8px',
                           position: 'relative',
@@ -485,7 +468,7 @@ function Estatisticas() {
                             textAlign: 'center',
                             lineHeight: '1'
                           }}>
-                            {tempoMinutos}m
+                            {timeInMinutes}m
                           </span>
                         </div>
                         <span style={{
@@ -493,7 +476,7 @@ function Estatisticas() {
                           color: 'var(--darkmode-text-tertiary)',
                           fontWeight: '500'
                         }}>
-                          {dia}
+                          {day}
                         </span>
                       </div>
                     );
@@ -505,14 +488,14 @@ function Estatisticas() {
                   fontSize: '12px',
                   color: 'var(--darkmode-text-secondary)'
                 }}>
-                  Tempo total estudado por dia (minutos)
+                  Total time studied per day (minutes)
                 </div>
               </div>
             ) : (
               <div style={{ textAlign: 'center', color: 'var(--darkmode-text-secondary)' }}>
                 <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏱️</div>
-                <p>Nenhum tempo registrado ainda</p>
-                <p style={{ fontSize: '12px' }}>Comece a cronometrar seus estudos</p>
+                <p>No time logged yet</p>
+                <p style={{ fontSize: '12px' }}>Start timing your studies</p>
               </div>
             )}
           </div>
@@ -522,4 +505,4 @@ function Estatisticas() {
   );
 }
 
-export default Estatisticas;
+export default Statistics;

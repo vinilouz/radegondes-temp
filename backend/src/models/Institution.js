@@ -1,50 +1,48 @@
 const mongoose = require('mongoose');
 
-const InstituicaoSchema = new mongoose.Schema({
-  nome: {
+const InstitutionSchema = new mongoose.Schema({
+  name: {
     type: String,
     required: true,
     trim: true,
   },
-  sigla: {
+  acronym: {
     type: String,
     required: true,
     trim: true,
     uppercase: true,
   },
-  logotipo: {
+  logo: {
     type: String,
     trim: true,
   },
-  estado: {
+  state: {
     type: String,
     required: true,
     trim: true,
   },
-  cidade: {
+  city: {
     type: String,
     required: true,
     trim: true,
   },
-  tipo: {
+  type: {
     type: String,
     required: true,
-    enum: ['Concurso Público', 'Enem', 'Vestibular', 'Residência Médica', 'OAB', 'Concurso Militar', 'Outros'],
-    default: 'Concurso Público'
+    enum: ['Public Contest', 'ENEM', 'Entrance Exam', 'Medical Residency', 'OAB', 'Military Contest', 'Others'],
+    default: 'Public Contest'
   },
-  categoria: {
+  category: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Categoria',
+    ref: 'Category',
     required: true
   },
-  cargos: [{
+  positions: [{
     type: String,
     trim: true
   }],
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  }
+}, {
+  timestamps: true
 });
 
-module.exports = mongoose.model('Instituicao', InstituicaoSchema);
+module.exports = mongoose.model('Institution', InstitutionSchema);

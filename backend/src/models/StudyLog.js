@@ -1,108 +1,98 @@
 const mongoose = require('mongoose');
 
-const RegistroEstudoSchema = new mongoose.Schema({
-  usuario: {
+const StudyLogSchema = new mongoose.Schema({
+  user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  plano: {
+  studyPlan: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Plano',
+    ref: 'StudyPlan',
     required: true
   },
-  disciplinaId: {
-    type: String,
+  topicProgress: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'TopicProgress',
     required: true
   },
-  disciplinaNome: {
-    type: String,
-    required: true
-  },
-  sessaoId: {
+  sessionId: {
     type: String,
     required: false,
     trim: true,
-    index: true // Para busca rápida
+    index: true // For fast lookups
   },
-  topico: {
-    type: String,
-    trim: true,
-    required: false
-  },
-  indice: {
+  index: {
     type: Number,
     default: 0
   },
-  tempoEstudo: {
-    type: Number, // tempo em segundos
+  duration: {
+    type: Number, // in seconds
     required: true,
     default: 0
   },
-  observacoes: {
+  notes: {
     type: String,
     trim: true,
     required: false
   },
   links: [{
-    titulo: String,
+    title: String,
     url: String
   }],
-  questoesPlanejadas: {
+  questionsPlanned: {
     type: Number,
     default: 0
   },
-  questoesRealizadas: {
+  questionsCompleted: {
     type: Number,
     default: 0
   },
-  tipoAtividade: {
+  activityType: {
     type: String,
-    enum: ['estudo', 'revisao', 'simulado'],
-    default: 'estudo'
+    enum: ['study', 'review', 'simulation'],
+    default: 'study'
   },
   material: {
     type: String,
     trim: true,
     required: false
   },
-  estudoFinalizado: {
+  isCompleted: {
     type: Boolean,
     default: false
   },
-  marcarComoEstudado: {
+  markedAsStudied: {
     type: Boolean,
     default: false
   },
-  dataOpcao: {
+  dateOption: {
     type: String,
-    enum: ['hoje', 'estudando', 'ja-estudei', 'agendar'],
-    default: 'estudando'
+    enum: ['today', 'studying', 'already_studied', 'schedule'],
+    default: 'studying'
   },
-  dataAgendada: {
-    type: String,
-    required: false
-  },
-  horarioAgendado: {
+  scheduledDate: {
     type: String,
     required: false
   },
-  data: {
+  scheduledTime: {
+    type: String,
+    required: false
+  },
+  date: {
     type: Date,
     default: Date.now
   },
-  iniciadaEm: {
+  startedAt: {
     type: Date,
     required: false
   },
-  finalizadaEm: {
+  finishedAt: {
     type: Date,
     required: false
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
+}, {
+  timestamps: true
 });
 
-module.exports = mongoose.model('RegistroEstudo', RegistroEstudoSchema);
+module.exports = mongoose.model('StudyLog', StudyLogSchema);

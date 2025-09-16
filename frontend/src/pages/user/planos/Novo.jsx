@@ -2,23 +2,22 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { API_BASE_URL } from '../../../config/api';
 
-function Novo() {
+function NewStudyPlan() {
   const { token, user } = useAuth();
   
   useEffect(() => {
-    document.title = 'Novo Plano - Radegondes';
-    fetchCategorias();
-    fetchInstituicoes();
+    document.title = 'New Plan - Radegondes';
+    fetchCategories();
+    fetchInstitutions();
   }, []);
 
   // Fechar dropdowns quando clicar fora
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // @ts-ignore
       const target = event.target;
       if (!target.closest('.dropdown-container')) {
-        setShowInstituicoesList(false);
-        setShowCategoriasList(false);
+        setShowInstitutionsList(false);
+        setShowCategoriesList(false);
       }
     };
 
@@ -28,408 +27,326 @@ function Novo() {
     };
   }, []);
 
-  const estados = [
+  const states = [
     "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS",
     "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC",
     "SP", "SE", "TO"
   ];
 
-  const regioes = {
-    Norte: ["AC", "AP", "AM", "PA", "RO", "RR", "TO"],
-    Nordeste: ["AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE"],
-    "Centro-Oeste": ["DF", "GO", "MT", "MS"],
-    Sul: ["PR", "RS", "SC"],
-    Sudeste: ["ES", "MG", "RJ", "SP"],
+  const regions = {
+    North: ["AC", "AP", "AM", "PA", "RO", "RR", "TO"],
+    Northeast: ["AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE"],
+    "Center-West": ["DF", "GO", "MT", "MS"],
+    South: ["PR", "RS", "SC"],
+    Southeast: ["ES", "MG", "RJ", "SP"],
     Federal: ["DF"]
   };
 
-  const [estadosAtivos, setEstadosAtivos] = useState([]); // string[]
-  const [regiaoAtiva, setRegiaoAtiva] = useState(null); // string | null
-  const [categorias, setCategorias] = useState([]); // any[]
-  const [categoriasAtivas, setCategoriasAtivas] = useState([]); // string[]
-  const [tiposAtivos, setTiposAtivos] = useState([]); // string[]
-  const [instituicoes, setInstituicoes] = useState([]); // any[]
-  const [instituicoesSelecionadas, setInstituicoesSelecionadas] = useState([]); // array de IDs
-  const [categoriasSelecionadas, setCategoriasSelecionadas] = useState([]); // array de IDs  
-  const [textoSearch, setTextoSearch] = useState('');
-  const [showInstituicoesList, setShowInstituicoesList] = useState(false);
-  const [showCategoriasList, setShowCategoriasList] = useState(false);
-  const [instituicaoExpandida, setInstituicaoExpandida] = useState(null);
-  const [cargosSelecionados, setCargosSelecionados] = useState([]); // array de objetos {instituicao, cargo}
-  const [editaisStats, setEditaisStats] = useState({}); // objeto para armazenar {nomeEdital: {disciplinas: X, topicos: Y}}
+  const [activeStates, setActiveStates] = useState([]);
+  const [activeRegion, setActiveRegion] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [activeCategories, setActiveCategories] = useState([]);
+  const [activeTypes, setActiveTypes] = useState([]);
+  const [institutions, setInstitutions] = useState([]);
+  const [selectedInstitutions, setSelectedInstitutions] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [searchText, setSearchText] = useState('');
+  const [showInstitutionsList, setShowInstitutionsList] = useState(false);
+  const [showCategoriesList, setShowCategoriesList] = useState(false);
+  const [expandedInstitution, setExpandedInstitution] = useState(null);
+  const [selectedNotices, setSelectedNotices] = useState([]);
+  const [noticeStats, setNoticeStats] = useState({});
 
-  const tiposInstituicao = [
-    "Concurso Público",
-    "Enem", 
-    "Vestibular",
-    "Residência Médica",
-    "OAB",
-    "Concurso Militar",
-    "Outros"
+  const institutionTypes = [
+    "Public Contest", "ENEM", "Entrance Exam", "Medical Residency", "OAB", "Military Contest", "Others"
   ];
 
-  const fetchCategorias = async () => {
+  const fetchCategories = async () => {
     try {
-      console.log('Iniciando busca de categorias...');
-      console.log('Token:', token ? 'Presente' : 'Ausente');
-      console.log('URL:', `${API_BASE_URL}/api/categorias`);
-      
-      const response = await fetch(`${API_BASE_URL}/api/categorias`, {
+      const response = await fetch(`${API_BASE_URL}/api/categories`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
-      console.log('Response status categorias:', response.status);
-      console.log('Response ok categorias:', response.ok);
-      
       if (response.ok) {
         const data = await response.json();
-        console.log('Categorias carregadas:', data);
-        console.log('Número de categorias:', data.length);
-        setCategorias(data);
+        setCategories(data);
       } else {
-        console.error('Erro na resposta categorias:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('Erro detalhado categorias:', errorText);
+        console.error('Error fetching categories:', response.status, response.statusText);
       }
     } catch (error) {
-      console.error('Erro ao buscar categorias:', error);
+      console.error('Error fetching categories:', error);
     }
   };
 
-  const fetchInstituicoes = async () => {
+  const fetchInstitutions = async () => {
     try {
-      console.log('Iniciando busca de instituições...');
-      console.log('Token:', token ? 'Presente' : 'Ausente');
-      console.log('URL:', `${API_BASE_URL}/api/instituicoes`);
-      
-      const response = await fetch(`${API_BASE_URL}/api/instituicoes`, {
+      const response = await fetch(`${API_BASE_URL}/api/institutions`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
-      
       if (response.ok) {
         const data = await response.json();
-        console.log('Instituições carregadas:', data);
-        console.log('Número de instituições:', data.length);
-        setInstituicoes(data);
+        setInstitutions(data);
       } else {
-        console.error('Erro na resposta:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('Erro detalhado:', errorText);
+        console.error('Error fetching institutions:', response.status, response.statusText);
       }
     } catch (error) {
-      console.error('Erro ao buscar instituições:', error);
+      console.error('Error fetching institutions:', error);
     }
   };
 
-  const fetchEditalStats = async (nomeEdital) => {
+  const fetchNoticeStats = async (noticeName) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/edital/${encodeURIComponent(nomeEdital)}/stats`);
-      
+      const response = await fetch(`${API_BASE_URL}/api/notices/${encodeURIComponent(noticeName)}/stats`);
       if (response.ok) {
         const stats = await response.json();
-        setEditaisStats(prev => ({
+        setNoticeStats(prev => ({
           ...prev,
-          [nomeEdital]: {
-            disciplinas: stats.disciplinas,
-            topicos: stats.topicos
+          [noticeName]: {
+            subjects: stats.subjects,
+            topics: stats.topics
           }
         }));
       } else {
-        console.error('Erro ao buscar estatísticas do edital:', nomeEdital);
+        console.error('Error fetching notice stats:', noticeName);
       }
     } catch (error) {
-      console.error('Erro ao buscar estatísticas do edital:', error);
+      console.error('Error fetching notice stats:', error);
     }
   };
 
-  const handleRegiaoClick = (regiao) => {
-    const estadosRegiao = regioes[regiao];
+  const handleRegionClick = (region) => {
+    const regionStates = regions[region];
     
-    // Se a região já está ativa, desativá-la
-    if (regiaoAtiva === regiao) {
-      setRegiaoAtiva(null);
-      setEstadosAtivos([]);
+    if (activeRegion === region) {
+      setActiveRegion(null);
+      setActiveStates([]);
     } else {
-      // Ativar a nova região
-      setRegiaoAtiva(regiao);
-      setEstadosAtivos(estadosRegiao);
+      setActiveRegion(region);
+      setActiveStates(regionStates);
     }
   };
 
-    const handleEstadoClick = (estado) => {
-    // Limpar região ativa quando clicamos em estado individual
-    setRegiaoAtiva(null);
+    const handleStateClick = (state) => {
+    setActiveRegion(null);
     
-    // @ts-ignore
-    setEstadosAtivos(prev => {
-      if (prev.includes(estado)) {
-        return prev.filter(uf => uf !== estado);
+    setActiveStates(prev => {
+      if (prev.includes(state)) {
+        return prev.filter(uf => uf !== state);
       } else {
-        return [...prev, estado];
+        return [...prev, state];
       }
     });
   };
 
-  const handleCategoriaChipClick = (categoriaId) => {
-    // @ts-ignore
-    setCategoriasAtivas(prev => {
-      if (prev.includes(categoriaId)) {
-        return prev.filter(id => id !== categoriaId);
+  const handleCategoryChipClick = (categoryId) => {
+    setActiveCategories(prev => {
+      if (prev.includes(categoryId)) {
+        return prev.filter(id => id !== categoryId);
       } else {
-        return [...prev, categoriaId];
+        return [...prev, categoryId];
       }
     });
   };
 
-  const handleTipoClick = (tipo) => {
-    // @ts-ignore
-    setTiposAtivos(prev => {
-      if (prev.includes(tipo)) {
-        return prev.filter(t => t !== tipo);
+  const handleTypeClick = (type) => {
+    setActiveTypes(prev => {
+      if (prev.includes(type)) {
+        return prev.filter(t => t !== type);
       } else {
-        return [...prev, tipo];
+        return [...prev, type];
       }
     });
   };
 
-  const handleInstituicaoClick = (e) => {
+  const handleInstitutionClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log('=== CLIQUE NA INSTITUIÇÃO ===');
-    console.log('Estado atual do dropdown:', showInstituicoesList);
-    console.log('Número de instituições carregadas:', instituicoes.length);
-    console.log('Primeiro item das instituições:', instituicoes[0]);
-    setShowInstituicoesList(!showInstituicoesList);
-    setShowCategoriasList(false); // Fechar o outro dropdown
-    console.log('Novo estado do dropdown será:', !showInstituicoesList);
+    setShowInstitutionsList(!showInstitutionsList);
+    setShowCategoriesList(false);
   };
 
-  const handleCategoriaClick = (e) => {
+  const handleCategoryClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log('Clique na categoria, estado atual:', showCategoriasList);
-    setShowCategoriasList(!showCategoriasList);
-    setShowInstituicoesList(false); // Fechar o outro dropdown
+    setShowCategoriesList(!showCategoriesList);
+    setShowInstitutionsList(false);
   };
 
-  const handleInstituicaoSelect = (instituicao) => {
-    // @ts-ignore
-    setInstituicoesSelecionadas(prev => {
-      if (prev.some(inst => inst._id === instituicao._id)) {
-        return prev.filter(inst => inst._id !== instituicao._id);
+  const handleInstitutionSelect = (institution) => {
+    setSelectedInstitutions(prev => {
+      if (prev.some(inst => inst._id === institution._id)) {
+        return prev.filter(inst => inst._id !== institution._id);
       } else {
-        return [...prev, instituicao];
+        return [...prev, institution];
       }
     });
   };
 
-  const handleCategoriaSelect = (categoria) => {
-    // @ts-ignore
-    setCategoriasSelecionadas(prev => {
-      if (prev.some(cat => cat._id === categoria._id)) {
-        return prev.filter(cat => cat._id !== categoria._id);
+  const handleCategorySelect = (category) => {
+    setSelectedCategories(prev => {
+      if (prev.some(cat => cat._id === category._id)) {
+        return prev.filter(cat => cat._id !== category._id);
       } else {
-        return [...prev, categoria];
+        return [...prev, category];
       }
     });
   };
 
-  const toggleInstituicao = (instituicaoId) => {
-    setInstituicaoExpandida(
-      instituicaoExpandida === instituicaoId ? null : instituicaoId
+  const toggleInstitution = (institutionId) => {
+    setExpandedInstitution(
+      expandedInstitution === institutionId ? null : institutionId
     );
   };
 
-  const handleCargoClick = (instituicao, cargo) => {
-    const cargoKey = `${instituicao._id}-${cargo}`;
-    // @ts-ignore
-    setCargosSelecionados(prev => {
-      const jaExiste = prev.some(item => item.id === cargoKey);
-      if (jaExiste) {
-        return prev.filter(item => item.id !== cargoKey);
+  const handleNoticeClick = (institution, notice) => {
+    const noticeKey = `${institution._id}-${notice}`;
+    setSelectedNotices(prev => {
+      const alreadyExists = prev.some(item => item.id === noticeKey);
+      if (alreadyExists) {
+        return prev.filter(item => item.id !== noticeKey);
       } else {
-        // Buscar estatísticas do edital quando adicionado
-        fetchEditalStats(cargo);
+        fetchNoticeStats(notice);
         
         return [...prev, {
-          id: cargoKey,
-          // @ts-ignore
-          instituicao: { 
-            nome: instituicao.nome, 
-            sigla: instituicao.sigla,
-            _id: instituicao._id
+          id: noticeKey,
+          institution: {
+            name: institution.name,
+            acronym: institution.acronym,
+            _id: institution._id
           },
-          cargo: cargo
+          notice: notice
         }];
       }
     });
   };
 
-  const removerCargo = (cargoId) => {
-    // @ts-ignore
-    setCargosSelecionados(prev => prev.filter(item => item.id !== cargoId));
+  const removeNotice = (noticeId) => {
+    setSelectedNotices(prev => prev.filter(item => item.id !== noticeId));
   };
 
-  const calcularTotais = () => {
-    let totalDisciplinas = 0;
-    let totalTopicos = 0;
+  const calculateTotals = () => {
+    let totalSubjects = 0;
+    let totalTopics = 0;
     
-    cargosSelecionados.forEach(item => {
-      const stats = editaisStats[item.cargo];
+    selectedNotices.forEach(item => {
+      const stats = noticeStats[item.notice];
       if (stats) {
-        totalDisciplinas += stats.disciplinas;
-        totalTopicos += stats.topicos;
+        totalSubjects += stats.subjects;
+        totalTopics += stats.topics;
       }
     });
     
-    return { totalDisciplinas, totalTopicos };
+    return { totalSubjects, totalTopics };
   };
 
-  const criarPlano = async () => {
-    if (cargosSelecionados.length === 0) {
-      alert('Selecione pelo menos um edital para criar o plano.');
+  const createPlan = async () => {
+    if (selectedNotices.length === 0) {
+      alert('Select at least one notice to create a plan.');
       return;
     }
 
     try {
-      // Lógica de nomeação dos planos
-      const instituicoesUnicas = [...new Set(cargosSelecionados.map(item => item.instituicao.sigla))];
-      let nomePlano;
+      const uniqueInstitutions = [...new Set(selectedNotices.map(item => item.institution.acronym))];
+      let planName;
 
-      if (instituicoesUnicas.length === 1) {
-        // Se todos os cargos são da mesma instituição, usar o nome da instituição
-        const instituicaoNome = cargosSelecionados[0].instituicao.nome;
-        nomePlano = `Plano ${instituicaoNome}`;
+      if (uniqueInstitutions.length === 1) {
+        const institutionName = selectedNotices[0].institution.name;
+        planName = `Plan ${institutionName}`;
       } else {
-        // Se são de instituições diferentes, usar o nome do usuário
-        const nomeUsuario = user?.nome || 'Usuário';
+        const userName = user?.firstName || 'User';
         
-        // Buscar quantos planos já existem para gerar numeração
-        const planosResponse = await fetch(`${API_BASE_URL}/api/planos`, {
+        const plansResponse = await fetch(`${API_BASE_URL}/api/study-plans`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        let numeroPlano = 1;
-        if (planosResponse.ok) {
-          const planosExistentes = await planosResponse.json();
-          // Contar planos que começam com "Plano {nomeUsuario}"
-          const planosDoUsuario = planosExistentes.filter(plano => 
-            plano.nome.startsWith(`Plano ${nomeUsuario}`)
+        let planNumber = 1;
+        if (plansResponse.ok) {
+          const existingPlans = await plansResponse.json();
+          const userPlans = existingPlans.filter(plan =>
+            plan.name.startsWith(`Plan ${userName}`)
           );
-          numeroPlano = planosDoUsuario.length + 1;
+          planNumber = userPlans.length + 1;
         }
 
-        nomePlano = numeroPlano === 1 ? `Plano ${nomeUsuario}` : `Plano ${nomeUsuario} ${numeroPlano}`;
+        planName = planNumber === 1 ? `Plan ${userName}` : `Plan ${userName} ${planNumber}`;
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/planos`, {
+      // The backend needs to be adapted to accept an array of notices/cargos
+      // and create the plan with the corresponding subjects.
+      const response = await fetch(`${API_BASE_URL}/api/study-plans`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          nome: nomePlano,
-          cargos: cargosSelecionados.map(item => ({
-            instituicao: {
-              nome: item.instituicao.nome,
-              sigla: item.instituicao.sigla,
-              _id: item.instituicao._id
-            },
-            cargo: item.cargo
-          }))
+          name: planName,
+          notices: selectedNotices.map(item => item.notice) // Sending notice names
         })
       });
 
       if (response.ok) {
-        // Redirecionar para a lista de planos
-        window.location.href = '/planos';
+        window.location.href = '/study-plans';
       } else {
         const errorData = await response.json();
-        console.error('Erro do servidor:', errorData);
-        alert(errorData.message || 'Erro ao criar plano.');
+        console.error('Server error:', errorData);
+        alert(errorData.message || 'Error creating plan.');
       }
     } catch (error) {
-      console.error('Erro ao criar plano:', error);
-      alert('Erro ao criar plano. Tente novamente.');
+      console.error('Error creating plan:', error);
+      alert('Error creating plan. Please try again.');
     }
   };
 
-  const isCargoSelecionado = (instituicao, cargo) => {
-    const cargoKey = `${instituicao._id}-${cargo}`;
-    // @ts-ignore
-    return cargosSelecionados.some(item => item.id === cargoKey);
+  const isNoticeSelected = (institution, notice) => {
+    const noticeKey = `${institution._id}-${notice}`;
+    return selectedNotices.some(item => item.id === noticeKey);
   };
 
-  // Função para filtrar instituições em tempo real
-  const getInstituicoesFiltradas = () => {
-    // @ts-ignore
-    return instituicoes.filter(instituicao => {
-      // Filtro: apenas instituições com cargos
-      if (!instituicao.cargos || instituicao.cargos.length === 0) {
+  const getFilteredInstitutions = () => {
+    return institutions.filter(institution => {
+      if (!institution.positions || institution.positions.length === 0) {
         return false;
       }
-
-      // Filtro por estados (se algum estado estiver selecionado)
-      if (estadosAtivos.length > 0) {
-        // @ts-ignore
-        if (!estadosAtivos.includes(instituicao.estado)) {
+      if (activeStates.length > 0) {
+        if (!activeStates.includes(institution.state)) {
           return false;
         }
       }
-
-      // Filtro por tipos de instituição (se algum tipo estiver selecionado)
-      if (tiposAtivos.length > 0) {
-        // @ts-ignore
-        if (!tiposAtivos.includes(instituicao.tipo)) {
+      if (activeTypes.length > 0) {
+        if (!activeTypes.includes(institution.type)) {
           return false;
         }
       }
-
-      // Filtro por categorias (se alguma categoria estiver selecionada)
-      if (categoriasSelecionadas.length > 0) {
-        // @ts-ignore
-        const instituicaoTemCategoria = categoriasSelecionadas.some(catSelecionada => 
-          // @ts-ignore
-          instituicao.categoria && instituicao.categoria._id === catSelecionada._id
+      if (selectedCategories.length > 0) {
+        const hasCategory = selectedCategories.some(selectedCat =>
+          institution.category && institution.category._id === selectedCat._id
         );
-        if (!instituicaoTemCategoria) {
+        if (!hasCategory) {
           return false;
         }
       }
-
-      // Filtro por instituições específicas (se alguma instituição estiver selecionada)
-      if (instituicoesSelecionadas.length > 0) {
-        // @ts-ignore
-        const instituicaoEstaSelecionada = instituicoesSelecionadas.some(instSelecionada => 
-          // @ts-ignore
-          instSelecionada._id === instituicao._id
+      if (selectedInstitutions.length > 0) {
+        const isSelected = selectedInstitutions.some(selectedInst =>
+          selectedInst._id === institution._id
         );
-        if (!instituicaoEstaSelecionada) {
+        if (!isSelected) {
           return false;
         }
       }
-
-      // Filtro por texto de busca
-      if (textoSearch.trim() !== '') {
-        const termo = textoSearch.toLowerCase();
-        const nomeMatch = instituicao.nome.toLowerCase().includes(termo);
-        const siglaMatch = instituicao.sigla.toLowerCase().includes(termo);
-        const cidadeMatch = instituicao.cidade.toLowerCase().includes(termo);
-        const tipoMatch = instituicao.tipo.toLowerCase().includes(termo);
-        // @ts-ignore
-        const cargoMatch = instituicao.cargos.some(cargo => 
-          cargo.toLowerCase().includes(termo)
+      if (searchText.trim() !== '') {
+        const term = searchText.toLowerCase();
+        const nameMatch = institution.name.toLowerCase().includes(term);
+        const acronymMatch = institution.acronym.toLowerCase().includes(term);
+        const cityMatch = institution.city.toLowerCase().includes(term);
+        const typeMatch = institution.type.toLowerCase().includes(term);
+        const positionMatch = institution.positions.some(position =>
+          position.toLowerCase().includes(term)
         );
         
-        if (!nomeMatch && !siglaMatch && !cidadeMatch && !tipoMatch && !cargoMatch) {
+        if (!nameMatch && !acronymMatch && !cityMatch && !typeMatch && !positionMatch) {
           return false;
         }
       }
-
       return true;
     });
   };
@@ -437,62 +354,60 @@ function Novo() {
   return (
     <div className="novo-plano-page">
       <header className='flex flex-col head'>
-        <h1>Novo Plano</h1>
+        <h1>New Study Plan</h1>
       </header>
       
-      {/* Seleção de Estados */}
       <div className="regions">
         <div className="flex justify-between item states">
           <span 
-            onClick={() => handleRegiaoClick('Norte')}
-            className={regiaoAtiva === 'Norte' ? 'active' : ''}
+            onClick={() => handleRegionClick('North')}
+            className={activeRegion === 'North' ? 'active' : ''}
             style={{ cursor: 'pointer' }}
           >
-            Norte
+            North
           </span>
           <span 
-            onClick={() => handleRegiaoClick('Nordeste')}
-            className={regiaoAtiva === 'Nordeste' ? 'active' : ''}
+            onClick={() => handleRegionClick('Northeast')}
+            className={activeRegion === 'Northeast' ? 'active' : ''}
             style={{ cursor: 'pointer' }}
           >
-            Nordeste
+            Northeast
           </span>
           <span 
-            onClick={() => handleRegiaoClick('Centro-Oeste')}
-            className={regiaoAtiva === 'Centro-Oeste' ? 'active' : ''}
+            onClick={() => handleRegionClick('Center-West')}
+            className={activeRegion === 'Center-West' ? 'active' : ''}
             style={{ cursor: 'pointer' }}
           >
-            Centro-Oeste
+            Center-West
           </span>
           <span 
-            onClick={() => handleRegiaoClick('Sul')}
-            className={regiaoAtiva === 'Sul' ? 'active' : ''}
+            onClick={() => handleRegionClick('South')}
+            className={activeRegion === 'South' ? 'active' : ''}
             style={{ cursor: 'pointer' }}
           >
-            Sul
+            South
           </span>
           <span 
-            onClick={() => handleRegiaoClick('Sudeste')}
-            className={regiaoAtiva === 'Sudeste' ? 'active' : ''}
+            onClick={() => handleRegionClick('Southeast')}
+            className={activeRegion === 'Southeast' ? 'active' : ''}
             style={{ cursor: 'pointer' }}
           >
-            Sudeste
+            Southeast
           </span>
           <span 
-            onClick={() => handleRegiaoClick('Federal')}
-            className={regiaoAtiva === 'Federal' ? 'active' : ''}
+            onClick={() => handleRegionClick('Federal')}
+            className={activeRegion === 'Federal' ? 'active' : ''}
             style={{ cursor: 'pointer' }}
           >
             Federal
           </span>
         </div>
         <div className="flex flex-wrap gap-2 item uf">
-          {/* @ts-ignore */}
-          {estados.map(uf => (
+          {states.map(uf => (
             <span 
               key={uf} 
-              className={estadosAtivos.includes(uf) ? 'active' : ''}
-              onClick={() => handleEstadoClick(uf)}
+              className={activeStates.includes(uf) ? 'active' : ''}
+              onClick={() => handleStateClick(uf)}
               style={{ cursor: 'pointer' }}
             >
               {uf}
@@ -501,36 +416,31 @@ function Novo() {
         </div>
       </div>
 
-      {/* Seleção de Tipos de Instituições */}
       <div className="regions">
         <div className="flex flex-wrap gap-2 item uf">
-          {/* @ts-ignore */}
-          {tiposInstituicao.map(tipo => (
+          {institutionTypes.map(type => (
             <span 
-              key={tipo} 
-              className={tiposAtivos.includes(tipo) ? 'active' : ''}
-              onClick={() => handleTipoClick(tipo)}
+              key={type}
+              className={activeTypes.includes(type) ? 'active' : ''}
+              onClick={() => handleTypeClick(type)}
               style={{ cursor: 'pointer' }}
             >
-              {tipo}
+              {type}
             </span>
           ))}
         </div>
       </div>
 
-      {/* Campos de Busca */}
       <div className="regions">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }} className="item uf">
-          {/* Instituições */}
           <div className="dropdown-container" style={{ position: 'relative' }}>
             <input
               type="text"
               value={
-                // @ts-ignore
-                instituicoesSelecionadas.map(inst => inst.sigla).join(', ')
+                selectedInstitutions.map(inst => inst.acronym).join(', ')
               }
-              onClick={handleInstituicaoClick}
-              placeholder="Selecionar instituições..."
+              onClick={handleInstitutionClick}
+              placeholder="Select institutions..."
               style={{
                 width: '100%',
                 padding: '8px 40px 8px 12px',
@@ -547,20 +457,16 @@ function Novo() {
                 backgroundSize: '12px'
               }}
               onMouseEnter={(e) => {
-                // @ts-ignore
                 e.target.style.backgroundColor = '#E6691225';
-                // @ts-ignore
                 e.target.style.borderColor = '#E6691240';
               }}
               onMouseLeave={(e) => {
-                // @ts-ignore
                 e.target.style.backgroundColor = '#E6691215';
-                // @ts-ignore
                 e.target.style.borderColor = '#E6691230';
               }}
               readOnly
             />
-            {showInstituicoesList && (
+            {showInstitutionsList && (
               <div style={{
                 position: 'absolute',
                 top: '100%',
@@ -575,11 +481,10 @@ function Novo() {
                 zIndex: 1000,
                 boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
               }}>
-                {/* @ts-ignore */}
-                {instituicoes.map(instituicao => (
+                {institutions.map(institution => (
                   <div
-                    key={instituicao._id}
-                    onClick={() => handleInstituicaoSelect(instituicao)}
+                    key={institution._id}
+                    onClick={() => handleInstitutionSelect(institution)}
                     style={{
                       padding: '8px 12px',
                       cursor: 'pointer',
@@ -591,41 +496,35 @@ function Novo() {
                       color: 'var(--darkmode-text-primary)'
                     }}
                     onMouseEnter={(e) => {
-                      // @ts-ignore
                       e.target.style.backgroundColor = 'var(--darkmode-bg-tertiary)'
                     }}
                     onMouseLeave={(e) => {
-                      // @ts-ignore
                       e.target.style.backgroundColor = 'var(--darkmode-bg-secondary)'
                     }}
                   >
                     <input
                       type="checkbox"
                       checked={
-                        // @ts-ignore
-                        instituicoesSelecionadas.some(inst => inst._id === instituicao._id)
+                        selectedInstitutions.some(inst => inst._id === institution._id)
                       }
-                      onChange={() => {}} // Controlado pelo onClick do div pai
+                      onChange={() => {}}
                       style={{ pointerEvents: 'none' }}
                     />
-                    {/* @ts-ignore */}
-                    {instituicao.sigla} - {instituicao.nome}
+                    {institution.acronym} - {institution.name}
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Categoria */}
           <div className="dropdown-container" style={{ position: 'relative' }}>
             <input
               type="text"
               value={
-                // @ts-ignore
-                categoriasSelecionadas.map(cat => cat.nome).join(', ')
+                selectedCategories.map(cat => cat.name).join(', ')
               }
-              onClick={handleCategoriaClick}
-              placeholder="Selecionar categorias..."
+              onClick={handleCategoryClick}
+              placeholder="Select categories..."
               style={{
                 width: '100%',
                 padding: '8px 40px 8px 12px',
@@ -642,20 +541,16 @@ function Novo() {
                 backgroundSize: '12px'
               }}
               onMouseEnter={(e) => {
-                // @ts-ignore
                 e.target.style.backgroundColor = '#E6691225';
-                // @ts-ignore
                 e.target.style.borderColor = '#E6691240';
               }}
               onMouseLeave={(e) => {
-                // @ts-ignore
                 e.target.style.backgroundColor = '#E6691215';
-                // @ts-ignore
                 e.target.style.borderColor = '#E6691230';
               }}
               readOnly
             />
-            {showCategoriasList && (
+            {showCategoriesList && (
               <div style={{
                 position: 'absolute',
                 top: '100%',
@@ -670,11 +565,10 @@ function Novo() {
                 zIndex: 1000,
                 boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
               }}>
-                {/* @ts-ignore */}
-                {categorias.map(categoria => (
+                {categories.map(category => (
                   <div
-                    key={categoria._id}
-                    onClick={() => handleCategoriaSelect(categoria)}
+                    key={category._id}
+                    onClick={() => handleCategorySelect(category)}
                     style={{
                       padding: '8px 12px',
                       cursor: 'pointer',
@@ -686,38 +580,33 @@ function Novo() {
                       color: 'var(--darkmode-text-primary)'
                     }}
                     onMouseEnter={(e) => {
-                      // @ts-ignore
                       e.target.style.backgroundColor = 'var(--darkmode-bg-tertiary)'
                     }}
                     onMouseLeave={(e) => {
-                      // @ts-ignore
                       e.target.style.backgroundColor = 'var(--darkmode-bg-secondary)'
                     }}
                   >
                     <input
                       type="checkbox"
                       checked={
-                        // @ts-ignore
-                        categoriasSelecionadas.some(cat => cat._id === categoria._id)
+                        selectedCategories.some(cat => cat._id === category._id)
                       }
-                      onChange={() => {}} // Controlado pelo onClick do div pai
+                      onChange={() => {}}
                       style={{ pointerEvents: 'none' }}
                     />
-                    {/* @ts-ignore */}
-                    {categoria.nome}
+                    {category.name}
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Campo de Texto */}
           <div>
             <input
               type="text"
-              value={textoSearch}
-              onChange={(e) => setTextoSearch(e.target.value)}
-              placeholder="Digite termos para busca..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              placeholder="Search by name, acronym, city..."
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -729,15 +618,11 @@ function Novo() {
                 transition: 'all 0.3s ease'
               }}
               onFocus={(e) => {
-                // @ts-ignore
                 e.target.style.backgroundColor = '#E6691225';
-                // @ts-ignore
                 e.target.style.borderColor = '#E66912';
               }}
               onBlur={(e) => {
-                // @ts-ignore
                 e.target.style.backgroundColor = '#E6691215';
-                // @ts-ignore
                 e.target.style.borderColor = '#E6691230';
               }}
             />
@@ -749,7 +634,7 @@ function Novo() {
         <section style={{ flex: 2 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>
-              Instituições disponíveis para estudo
+              Available Institutions
             </h3>
             <div style={{ 
               fontSize: '14px', 
@@ -759,15 +644,14 @@ function Novo() {
               borderRadius: '20px',
               border: '1px solid var(--darkmode-border-secondary)'
             }}>
-              {getInstituicoesFiltradas().length} de {instituicoes.filter(inst => inst.cargos && inst.cargos.length > 0).length} instituições
+              {getFilteredInstitutions().length} of {institutions.filter(inst => inst.positions && inst.positions.length > 0).length} institutions
             </div>
           </div>
           
           <div className="instituicoes-list">
-            {/* @ts-ignore */}
-            {getInstituicoesFiltradas().map(instituicao => (
+            {getFilteredInstitutions().map(institution => (
               <div 
-                key={instituicao._id} 
+                key={institution._id}
                 className="instituicao-card"
                 style={{
                   border: '1px solid var(--darkmode-border-secondary)',
@@ -779,77 +663,69 @@ function Novo() {
               >
                 <div 
                   className="instituicao-header"
-                  onClick={() => toggleInstituicao(instituicao._id)}
+                  onClick={() => toggleInstitution(institution._id)}
                   style={{
                     padding: '15px 20px',
                     cursor: 'pointer',
-                    borderBottom: instituicaoExpandida === instituicao._id ? '1px solid var(--darkmode-border-secondary)' : 'none',
+                    borderBottom: expandedInstitution === institution._id ? '1px solid var(--darkmode-border-secondary)' : 'none',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    backgroundColor: instituicaoExpandida === instituicao._id ? 'var(--darkmode-bg-tertiary)' : 'var(--darkmode-bg-secondary)'
+                    backgroundColor: expandedInstitution === institution._id ? 'var(--darkmode-bg-tertiary)' : 'var(--darkmode-bg-secondary)'
                   }}
                 >
                   <div>
                     <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>
-                      {/* @ts-ignore */}
-                      {instituicao.sigla} - {instituicao.nome}
+                      {institution.acronym} - {institution.name}
                     </h4>
                     <p style={{ margin: '5px 0 0 0', color: 'var(--darkmode-text-secondary)', fontSize: '14px' }}>
-                      {/* @ts-ignore */}
-                      {instituicao.cidade}, {instituicao.estado} • {instituicao.tipo}
+                      {institution.city}, {institution.state} • {institution.type}
                     </p>
                   </div>
                   <div style={{ fontSize: '18px', color: 'var(--darkmode-text-secondary)' }}>
-                    {instituicaoExpandida === instituicao._id ? '−' : '+'}
+                    {expandedInstitution === institution._id ? '−' : '+'}
                   </div>
                 </div>
                 
-                {/* @ts-ignore */}
-                {instituicaoExpandida === instituicao._id && instituicao.cargos && instituicao.cargos.length > 0 && (
+                {expandedInstitution === institution._id && institution.positions && institution.positions.length > 0 && (
                   <div className="cargos-list" style={{ padding: '15px 20px' }}>
                     <h5 style={{ margin: '0 0 15px 0', fontSize: '14px', color: 'var(--darkmode-text-primary)', fontWeight: '600' }}>
-                      Editais disponíveis:
+                      Available Notices:
                     </h5>
                     <div className="cargos-grid" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {/* @ts-ignore */}
-                      {instituicao.cargos.map((cargo, index) => {
-                        const selecionado = isCargoSelecionado(instituicao, cargo);
+                      {institution.positions.map((notice, index) => {
+                        const isSelected = isNoticeSelected(institution, notice);
                         return (
                           <div
                             key={index}
                             className="cargo-item"
-                            onClick={() => handleCargoClick(instituicao, cargo)}
+                            onClick={() => handleNoticeClick(institution, notice)}
                             style={{
                               padding: '10px 15px',
-                              border: selecionado ? '2px solid var(--orange-primary)' : '1px solid var(--darkmode-border-secondary)',
+                              border: isSelected ? '2px solid var(--orange-primary)' : '1px solid var(--darkmode-border-secondary)',
                               borderRadius: '20px',
                               cursor: 'pointer',
                               transition: 'all 0.2s',
-                              backgroundColor: selecionado ? 'var(--darkmode-bg-elevation-1)' : 'var(--darkmode-bg-tertiary)',
+                              backgroundColor: isSelected ? 'var(--darkmode-bg-elevation-1)' : 'var(--darkmode-bg-tertiary)',
                               fontSize: '13px',
-                              fontWeight: selecionado ? '600' : '400',
-                              color: selecionado ? 'var(--orange-primary)' : 'var(--darkmode-text-primary)',
+                              fontWeight: isSelected ? '600' : '400',
+                              color: isSelected ? 'var(--orange-primary)' : 'var(--darkmode-text-primary)',
                               textAlign: 'center'
                             }}
                             onMouseEnter={(e) => {
-                              if (!selecionado) {
-                                // @ts-ignore
+                              if (!isSelected) {
                                 e.target.style.backgroundColor = 'var(--darkmode-bg-elevation-1)';
-                                // @ts-ignore
                                 e.target.style.borderColor = 'var(--darkmode-border-tertiary)';
                               }
                             }}
                             onMouseLeave={(e) => {
-                              if (!selecionado) {
-                                // @ts-ignore
+                              if (!isSelected) {
                                 e.target.style.backgroundColor = 'var(--darkmode-bg-tertiary)';
-                                // @ts-ignore
                                 e.target.style.borderColor = 'var(--darkmode-border-secondary)';
                               }
                             }}
                           >
-                            {cargo}
+                            {notice}
                           </div>
                         );
                       })}
@@ -857,22 +733,21 @@ function Novo() {
                   </div>
                 )}
                 
-                {/* @ts-ignore */}
-                {instituicaoExpandida === instituicao._id && (!instituicao.cargos || instituicao.cargos.length === 0) && (
+                {expandedInstitution === institution._id && (!institution.positions || institution.positions.length === 0) && (
                   <div style={{ padding: '15px 20px', color: 'var(--darkmode-text-secondary)', fontStyle: 'italic', fontSize: '14px' }}>
-                    Nenhum edital cadastrado para esta instituição.
+                    No notices registered for this institution.
                   </div>
                 )}
               </div>
             ))}
           </div>
 
-          {getInstituicoesFiltradas().length === 0 && (
+          {getFilteredInstitutions().length === 0 && (
             <div style={{ textAlign: 'center', padding: '40px', color: 'var(--darkmode-text-secondary)' }}>
               <p>
-                {instituicoes.length === 0 
-                  ? 'Nenhuma instituição cadastrada ainda.' 
-                  : 'Nenhuma instituição encontrada com os filtros aplicados.'
+                {institutions.length === 0
+                  ? 'No institutions registered yet.'
+                  : 'No institutions found with the applied filters.'
                 }
               </p>
             </div>
@@ -885,30 +760,24 @@ function Novo() {
             borderRadius: '8px',
             border: '1px solid var(--darkmode-border-secondary)'
           }}>
-            {cargosSelecionados.length > 0 ? (
+            {selectedNotices.length > 0 ? (
               <div>
-                {/* Agrupar cargos por instituição */}
                 {(() => {
-                  // @ts-ignore
-                  const cargosAgrupados = cargosSelecionados.reduce((acc, item) => {
-                    // @ts-ignore
-                    const siglaInstituicao = item.instituicao.sigla;
-                    if (!acc[siglaInstituicao]) {
-                      acc[siglaInstituicao] = {
-                        // @ts-ignore
-                        instituicao: item.instituicao,
-                        cargos: []
+                  const groupedNotices = selectedNotices.reduce((acc, item) => {
+                    const institutionAcronym = item.institution.acronym;
+                    if (!acc[institutionAcronym]) {
+                      acc[institutionAcronym] = {
+                        institution: item.institution,
+                        notices: []
                       };
                     }
-                    // @ts-ignore
-                    acc[siglaInstituicao].cargos.push(item);
+                    acc[institutionAcronym].notices.push(item);
                     return acc;
                   }, {});
 
-                  return Object.values(cargosAgrupados).map((grupo) => (
+                  return Object.values(groupedNotices).map((group) => (
                     <div
-                      // @ts-ignore
-                      key={grupo.instituicao.sigla}
+                      key={group.institution.acronym}
                       style={{
                         marginBottom: '15px',
                         padding: '20px',
@@ -919,7 +788,6 @@ function Novo() {
                         position: 'relative'
                       }}
                     >
-                      {/* Header com logo e nome da instituição */}
                       <div style={{ 
                         display: 'flex', 
                         alignItems: 'center', 
@@ -939,8 +807,7 @@ function Novo() {
                           border: '1px solid var(--darkmode-border-secondary)'
                         }}>
                           <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--darkmode-text-secondary)' }}>
-                            {/* @ts-ignore */}
-                            {grupo.instituicao.sigla}
+                            {group.institution.acronym}
                           </span>
                         </div>
                         <div className="flex-1">
@@ -950,26 +817,21 @@ function Novo() {
                             fontWeight: '600',
                             color: 'var(--darkmode-text-primary)'
                           }}>
-                            {/* @ts-ignore */}
-                            {grupo.instituicao.nome}
+                            {group.institution.name}
                           </h4>
                           <div style={{
                             fontSize: '12px',
                             color: 'var(--darkmode-text-secondary)',
                             marginTop: '4px'
                           }}>
-                            {/* @ts-ignore */}
-                            {grupo.cargos.length} cargo{grupo.cargos.length > 1 ? 's' : ''} selecionado{grupo.cargos.length > 1 ? 's' : ''}
+                            {group.notices.length} notice{group.notices.length > 1 ? 's' : ''} selected
                           </div>
                         </div>
                       </div>
                       
-                      {/* Lista de cargos da instituição */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {/* @ts-ignore */}
-                        {grupo.cargos.map((item) => (
+                        {group.notices.map((item) => (
                           <div
-                            // @ts-ignore
                             key={item.id}
                             style={{
                               display: 'flex',
@@ -985,24 +847,20 @@ function Novo() {
                             }}
                           >
                             <span>
-                              {/* @ts-ignore */}
-                              {item.cargo}
-                              {editaisStats[item.cargo] && (
+                              {item.notice}
+                              {noticeStats[item.notice] && (
                                 <span style={{ 
                                   color: 'var(--darkmode-text-secondary)', 
                                   fontSize: '12px', 
                                   marginLeft: '8px',
                                   fontWeight: 'normal'
                                 }}>
-                                  ({editaisStats[item.cargo].disciplinas} disciplinas / {editaisStats[item.cargo].topicos} tópicos)
+                                  ({noticeStats[item.notice].subjects} subjects / {noticeStats[item.notice].topics} topics)
                                 </span>
                               )}
                             </span>
                             <button
-                              onClick={() => removerCargo(
-                                // @ts-ignore
-                                item.id
-                              )}
+                              onClick={() => removeNotice(item.id)}
                               style={{
                                 background: 'none',
                                 border: 'none',
@@ -1017,14 +875,12 @@ function Novo() {
                                 borderRadius: '50%'
                               }}
                               onMouseEnter={(e) => {
-                                // @ts-ignore
                                 e.target.style.backgroundColor = 'var(--darkmode-bg-tertiary)';
                               }}
                               onMouseLeave={(e) => {
-                                // @ts-ignore
                                 e.target.style.backgroundColor = 'transparent';
                               }}
-                              title="Remover cargo"
+                              title="Remove notice"
                             >
                               ×
                             </button>
@@ -1035,10 +891,9 @@ function Novo() {
                   ));
                 })()}
                 
-                {/* Botão Criar Plano */}
                 <div style={{ padding: '0 20px 20px' }}>
                   <button
-                    onClick={criarPlano}
+                    onClick={createPlan}
                     style={{
                       width: '100%',
                       padding: '12px',
@@ -1051,20 +906,17 @@ function Novo() {
                       cursor: 'pointer'
                     }}
                     onMouseEnter={(e) => {
-                      // @ts-ignore
                       e.target.style.backgroundColor = 'var(--orange-primary-hover)';
                     }}
                     onMouseLeave={(e) => {
-                      // @ts-ignore
                       e.target.style.backgroundColor = 'var(--orange-primary)';
                     }}
                   >
-                    Criar Plano com {cargosSelecionados.length} Edita{cargosSelecionados.length > 1 ? 'is' : 'l'}
+                    Create Plan with {selectedNotices.length} Notice{selectedNotices.length > 1 ? 's' : ''}
                   </button>
                   
-                  {/* Resumo de totais */}
-                  {cargosSelecionados.length > 0 && (() => {
-                    const { totalDisciplinas, totalTopicos } = calcularTotais();
+                  {selectedNotices.length > 0 && (() => {
+                    const { totalSubjects, totalTopics } = calculateTotals();
                     return (
                       <div style={{
                         marginTop: '12px',
@@ -1076,7 +928,7 @@ function Novo() {
                         textAlign: 'center',
                         border: '1px solid var(--darkmode-border-secondary)'
                       }}>
-                        <strong style={{ color: 'var(--darkmode-text-primary)' }}>Total: {totalDisciplinas} disciplina{totalDisciplinas !== 1 ? 's' : ''} • {totalTopicos} tópico{totalTopicos !== 1 ? 's' : ''}</strong>
+                        <strong style={{ color: 'var(--darkmode-text-primary)' }}>Total: {totalSubjects} subject{totalSubjects !== 1 ? 's' : ''} • {totalTopics} topic{totalTopics !== 1 ? 's' : ''}</strong>
                       </div>
                     );
                   })()}
@@ -1095,10 +947,10 @@ function Novo() {
                   📋
                 </div>
                 <h4 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '600', color: 'var(--darkmode-text-primary)' }}>
-                  Nenhum cargo selecionado
+                  No notices selected
                 </h4>
                 <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.4', color: 'var(--darkmode-text-secondary)' }}>
-                  Selecione os editais das instituições para criar seu plano de estudos personalizado.
+                  Select notices from the institutions to create your custom study plan.
                 </p>
               </div>
             )}
@@ -1109,4 +961,4 @@ function Novo() {
   );
 }
 
-export default Novo;
+export default NewStudyPlan;
